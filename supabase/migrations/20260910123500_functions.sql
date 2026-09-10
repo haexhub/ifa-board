@@ -45,7 +45,7 @@ $$;
 grant execute on function public.get_player_scores_by_category(uuid, uuid, date, date)
   to authenticated;
 
--- Full team ranking: dense_rank over lexicographic category-order.
+-- Full team ranking: competition rank over lexicographic category-order.
 create or replace function public.get_team_ranking(
   p_team uuid,
   p_from date,
@@ -95,7 +95,7 @@ begin
   ),
   ranked as (
     select *,
-           dense_rank() over (order by ranking_vector desc) as rank_position
+           rank() over (order by ranking_vector desc) as rank_position
       from pivoted
   )
   select jsonb_agg(row_to_json(r) order by r.rank_position, r.jersey_number nulls last)
@@ -133,7 +133,8 @@ create or replace function public.get_public_ranking(
 returns jsonb
 language sql
 stable
-security invoker
+security definer
+set search_path = public
 as $$
   select jsonb_build_object(
     'team_name', null,

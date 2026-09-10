@@ -14,6 +14,13 @@ create policy tphoto_read_member on storage.objects
   using (
     bucket_id = 'training-photos'
     and public.is_member(((storage.foldername(name))[1])::uuid)
+    and exists (
+      select 1
+        from public.trainings t
+       where t.id = ((storage.foldername(name))[2])::uuid
+         and t.team_id = ((storage.foldername(name))[1])::uuid
+         and (t.status = 'saved' or public.is_trainer(t.team_id))
+    )
   );
 
 create policy tphoto_write_trainer on storage.objects

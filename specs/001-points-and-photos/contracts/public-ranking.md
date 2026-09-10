@@ -13,7 +13,7 @@ the database.
 
 ```ts
 type PublicRankingRow = {
-  rank_position: number         // 1-based; ties share a rank (dense_rank)
+  rank_position: number         // 1-based competition rank; ties share a rank (1, 2, 2, 4)
   jersey_number: number | null  // null => rendered as "—" (FR-063)
   scores: Record<string, number>  // key = category name (string), value = SUM(value) in timeframe
 }
@@ -51,7 +51,8 @@ create or replace function public.get_public_ranking(
 ) returns jsonb
 language plpgsql
 stable
-security invoker
+security definer
+set search_path = public
 as $$
 declare
   v_team_id uuid;
@@ -68,17 +69,9 @@ begin
     );
   end if;
 
-  -- (Assemble ranking using is_member-free path so anon can call.
-  --  Base tables are NOT read via the anon session's own privileges;
-  --  the SECURITY INVOKER on this function relies on the base tables
-  --  being gated by RLS. Because this function is called by anon and
-  --  base tables deny anon, we must grant SELECT of the specific
-  --  projected columns via a definer wrapper OR keep this function
-  --  `security definer` with a very narrow projection.
-  --  Decision: use `security definer` limited to reading the aggregated
-  --  columns only, since that is safer to audit than granting anon
-  --  select on base tables. Ownership set to a role that only has
-  --  read access.)
+  -- Assemble the projection using only the explicitly allowed columns.
+  -- The function is owned by a dedicated read-only role and must not expose
+  -- team IDs, player names, or any other non-public columns.
   return v_result;
 end
 $$;
@@ -87,7 +80,7 @@ grant execute on function public.get_public_ranking(text, date, date) to anon, a
 ```
 
 The decision above (`security definer` on a role with strictly limited
-grants) diverges from Round 1's `security invoker` sketch. Reason: with
+grants) diverges from Round 1's `security invoker` sketch. With
 multi-tenant RLS, invoker semantics would require granting anon
 `select` on base tables — a bigger footprint than the projection
 requires. The definer function is narrower.

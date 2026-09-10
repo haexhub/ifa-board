@@ -57,7 +57,7 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 ### Database schema
 
 - [X] T015 Migration `supabase/migrations/20260910120000_init_teams.sql` — create tables `teams`, `memberships` (composite PK, `role` check), `invitations` (unique `token`, partial unique on `(team_id, email) where accepted_at is null`) per [data-model.md](./data-model.md)
-- [X] T016 Migration `supabase/migrations/20260910120500_helpers.sql` — `public.is_member(uuid)`, `public.is_trainer(uuid)`, `public.user_profiles` view
+- [X] T016 Migration `supabase/migrations/20260910120500_helpers.sql` — `public.is_member(uuid)`, `public.is_trainer(uuid)`, RLS-protected `public.user_profiles` table and profile sync trigger
 - [X] T017 Migration `supabase/migrations/20260910121000_team_scoped_tables.sql` — create `players`, `point_categories`, `trainings`, `training_photos`, `point_entries`, `team_settings` with `team_id` FKs, partial unique indexes (`players_active_jersey_per_team_uniq`, `players_linked_user_per_team_uniq`), other indexes per [data-model.md](./data-model.md)
 - [X] T018 Migration `supabase/migrations/20260910121500_triggers.sql` — audit `set_last_updated_at()` on all mutable tables; `prevent_last_trainer_change()` on `memberships`; `enforce_point_entry_range()`; `enforce_point_entry_team_consistency()`; `enforce_training_has_photo()`; `enforce_photo_path_team()`; `enforce_player_linked_user_membership()`; `bootstrap_team_settings()` on `after insert on teams`
 - [X] T019 Migration `supabase/migrations/20260910122000_rls_enable.sql` — `alter table … enable row level security` for every base table
@@ -113,14 +113,14 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Implementation for User Story 0
 
-- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — service-role client; body `{name: string, slug?: string}`; generates unique slug (via `slug` npm + suffix loop); transaction: insert `teams` + insert `memberships(trainer)`; returns `{slug}`
+- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — validate the authenticated session, pass the verified user ID to one transactional RPC/database function, and atomically insert `teams.created_by` plus `memberships(trainer)`; separate REST inserts are prohibited; body `{name: string, slug?: string}`; returns `{slug}`
 - [ ] T045 [P] [US0] Server route `app/server/api/invitations/issue.post.ts` — trainer-only (verify via authenticated Supabase client + `is_trainer(team_id)`); body `{team_id, email, role}`; generate 32-char URL-safe token; insert `invitations`; call `supabase.auth.admin.inviteUserByEmail` with `redirectTo`=`<origin>/invite/<token>`
-- [ ] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token, force?: boolean}`; validate not expired, not accepted; if session email ≠ invitation email and not `force`: 400 with confirm flag; else insert membership (on conflict do nothing) + set `accepted_at`
+- [ ] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token}`; validate not expired, not accepted, and exact session-email match; reject mismatches server-side; call one transactional RPC/database function that atomically inserts membership (on conflict do nothing) and sets `accepted_at`; no `force` flag or cross-email confirmation
 - [ ] T047 [P] [US0] Composable `app/composables/useTeams.ts` — `createTeam({name, slug})` (POST /api/teams/create), `myTeams()` (list memberships joined with teams)
-- [ ] T048 [P] [US0] Composable `app/composables/useInvitations.ts` — `issue({team_id, email, role})`, `listOpenByTeam(team_id)`, `listMineByEmail()`, `revoke(id)`, `accept(token, force?)`
+- [ ] T048 [P] [US0] Composable `app/composables/useInvitations.ts` — `issue({team_id, email, role})`, `listOpenByTeam(team_id)`, `listMineByEmail()`, `revoke(id)`, `accept(token)`
 - [ ] T049 [P] [US0] Component `app/components/auth/LoginMagicLink.vue` — single email input; submit → `useAuth.signInWithMagicLink`; shows "Prüfe deine E-Mails" success state
 - [ ] T050 [P] [US0] Component `app/components/auth/TeamCreateForm.vue` — zod-validated (name required, optional slug); submit → `useTeams.createTeam`; on success navigate `/t/<slug>`
-- [ ] T051 [P] [US0] Component `app/components/auth/InvitationAcceptCard.vue` — shows team name + offered role + expiry; "Annehmen" button → `useInvitations.accept`; handles the email-mismatch confirm dialog
+- [ ] T051 [P] [US0] Component `app/components/auth/InvitationAcceptCard.vue` — shows team name + offered role + expiry; "Annehmen" button → `useInvitations.accept`; handles rejected email mismatches with a sign-in-as-invited-email prompt
 - [ ] T052 [P] [US0] Component `app/components/team/InviteForm.vue` — zod-validated (email + role); submit → `useInvitations.issue`
 - [ ] T053 [P] [US0] Component `app/components/team/InviteList.vue` — reads open invitations for the current team; "Widerrufen" per row
 - [ ] T054 [P] [US0] Component `app/components/team/MembershipTable.vue` — reads memberships for the current team; role dropdown per row (trainer-only); "Entfernen" per row; error toasts surface the last-trainer trigger error

@@ -70,13 +70,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invitations_invited_by_fkey"
-            columns: ["invited_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "invitations_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -110,13 +103,6 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "memberships_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -165,27 +151,6 @@ export type Database = {
           team_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "players_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "players_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "players_linked_user_id_fkey"
-            columns: ["linked_user_id"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "players_team_id_fkey"
             columns: ["team_id"]
@@ -236,20 +201,6 @@ export type Database = {
           value_min?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "point_categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "point_categories_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "point_categories_team_id_fkey"
             columns: ["team_id"]
@@ -302,20 +253,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "point_entries_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "point_entries_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "point_entries_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -358,13 +295,6 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "team_settings_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       teams: {
@@ -395,22 +325,7 @@ export type Database = {
           name?: string
           slug?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "teams_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "teams_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       training_photos: {
         Row: {
@@ -446,13 +361,6 @@ export type Database = {
             columns: ["training_id"]
             isOneToOne: false
             referencedRelation: "trainings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_photos_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -496,20 +404,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "trainings_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "trainings_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "trainings_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -518,26 +412,24 @@ export type Database = {
           },
         ]
       }
-    }
-    Views: {
       user_profiles: {
         Row: {
           display_name: string | null
-          email: string | null
-          id: string | null
+          id: string
         }
         Insert: {
-          display_name?: never
-          email?: string | null
-          id?: string | null
+          display_name?: string | null
+          id: string
         }
         Update: {
-          display_name?: never
-          email?: string | null
-          id?: string | null
+          display_name?: string | null
+          id?: string
         }
         Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
     }
     Functions: {
       get_player_scores_by_category: {
@@ -560,6 +452,7 @@ export type Database = {
         Returns: Json
       }
       is_member: { Args: { p_team: string }; Returns: boolean }
+      is_profile_visible: { Args: { p_profile: string }; Returns: boolean }
       is_trainer: { Args: { p_team: string }; Returns: boolean }
     }
     Enums: {

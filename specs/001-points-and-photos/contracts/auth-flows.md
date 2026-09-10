@@ -70,12 +70,13 @@ Recipient klickt Link:
 
 POST /api/invitations/accept   (authenticated)
    1. row lookup: token gültig, nicht expired, nicht accepted
-   2. Wenn Row-`email` ≠ session-`email`: 400 mit Confirm-Flag
-      (Frontend zeigt Nachfrage; bei "Trotzdem annehmen" wird Body
-      `force: true` gesendet und der Check übersprungen)
-   3. insert into memberships(user_id=auth.uid(), team_id, role)
-      on conflict (user_id, team_id) do nothing  -- second click harmless
-   4. update invitations set accepted_at = now() where id = …
+   2. Wenn Row-`email` ≠ session-`email`: serverseitig ablehnen (400/403).
+      Der Request enthält kein `force`-Flag; ein weitergeleiteter Token darf
+      keine Membership für eine andere Session anlegen.
+   3. Eine transaktionale Datenbankfunktion validiert die Einladung erneut und
+      legt Membership und `accepted_at` atomar an; bei Fehlern wird alles
+      zurückgerollt. `on conflict (user_id, team_id) do nothing` macht den
+      zweiten Klick harmlos.
 
 Nuxt → redirect /t/<slug>
 ```

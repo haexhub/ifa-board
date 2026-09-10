@@ -32,14 +32,15 @@ research update.
   - **Onboarding** (`/start`): once a session exists but the user has no
     `memberships` rows, the app routes there. From `/start`, the user
     either:
-    - **founds a team** (`POST /api/teams/create` — server route with
-      service role that generates a unique slug via
-      `slug()` + collision counter and atomically inserts the team row
-      and a Trainer-Membership for the caller), or
+    - **founds a team** (`POST /api/teams/create` — server route validates
+      the authenticated session, passes the verified user ID to one
+      transactional RPC/database function, and atomically inserts the team
+      row plus a Trainer-Membership), or
     - **accepts an invitation** — the invitation-token was received via
       the `/invite/:token` link (which itself sends a magic-link if the
-      user isn't yet signed in) and resolves to `insert into
-      memberships` + `update invitations set accepted_at = now()`.
+      user isn't yet signed in) and is accepted by one transactional
+      database function that inserts the membership and sets
+      `accepted_at` atomically.
   - **Team-invite sending** (`POST /api/invitations/issue`): trainer-only,
     verifies the caller has `is_trainer(team_id)`, inserts an
     `invitations` row with a random token and 14-day expiry, and calls
@@ -48,7 +49,7 @@ research update.
     steers the recipient at the invite-token flow after login.
   - **Display name**: captured on the first onboarding step and written
     to `auth.users.user_metadata.display_name`; mirrored to a
-    `user_profiles` view for RLS-friendly reads.
+    RLS-protected `user_profiles` table for team-scoped reads.
 - **Rationale**: Passwordless removes the "forgot password" support
   burden and matches the constitution's mobile-first stance (typing an
   email + tapping a link is friendlier than remembering a password).
@@ -126,9 +127,10 @@ research update.
 
 ## R6: Public anonymous ranking
 
-- **Decision**: One function `public.get_public_ranking(p_slug text,
-  p_from date, p_to date) returns jsonb`, `security invoker`. Grants
-  `execute … to anon, authenticated`. Base tables remain locked down.
+- **Decision**: One narrowly projected function
+  `public.get_public_ranking(p_slug text, p_from date, p_to date) returns
+  jsonb`, `security definer`, owned by a constrained read-only role. Grants
+  `execute … to anon, authenticated`; base tables remain locked down.
 - **Rationale**: Slug is the anonymous identifier; the function resolves
   it to a team internally and never returns the team's UUID or names.
   Same reasoning as Round 1 (dedicated projection surface).
@@ -139,8 +141,8 @@ research update.
 
 - **Decision**: SQL — `public.get_team_ranking(p_team uuid, p_from date,
   p_to date) returns jsonb`. Lexicographic sort by category
-  `sort_order` × `sum(value) desc`; ties get equal rank via
-  `dense_rank()`. Public function is a projection over the same
+  `sort_order` × `sum(value) desc`; ties get equal rank via competition
+  `rank()` (so the sequence is 1, 2, 2, 4). Public function is a projection over the same
   algorithm but returns only jersey/scores.
 - **Rationale**: Single source of truth in SQL; the client stays
   presentation-only. Small data volumes make materialization unnecessary.
@@ -166,13 +168,17 @@ research update.
 
 ## R10: Team creation server route
 
-- **Decision**: `POST /api/teams/create` (server route with service
-  role) does three things in one transaction:
+- **Decision**: `POST /api/teams/create` validates the authenticated
+  session with a user-scoped server client, then passes the verified user ID
+  to one transactional RPC/database function. That function does three things
+  atomically:
   1. Generates slug candidate via `slug(name)`; if collision, append
      `-2`, `-3`, … until free.
-  2. `insert into teams(...)`.
-  3. `insert into memberships(user_id, team_id, role) values
-     (auth.uid(), <new_team_id>, 'trainer')`.
+  2. `insert into teams(created_by, ...)` using the verified user ID.
+  3. `insert into memberships(user_id, team_id, role)` with role `trainer`.
+  Separate REST inserts are prohibited because they can leave a team without
+  its first membership. A service-role client, if needed by the route, is
+  isolated from the browser session and receives only the verified user ID.
 - **Rationale**: The membership insert cannot be done from the client
   because at that instant the caller has no `is_trainer(<new_team_id>)`
   membership yet. Doing this on the server, atomically, avoids
@@ -199,12 +205,12 @@ research update.
     `useAuth.signIn` with the same email (magic-link); if a session
     exists, shows an "Accept invitation to team X as role Y" card that
     posts to `POST /api/invitations/accept` which:
-    1. Validates `token`, `expires_at > now()`, `accepted_at is null`.
-    2. Inserts membership.
-    3. Sets `accepted_at = now()`.
-    - If the email on the invitation ≠ the signed-in user's email:
-      requires an explicit confirmation ("Diese Einladung ist an
-      X@Y.tld; angemeldet bist du als Z@W.tld. Trotzdem annehmen?").
+      1. Validates `token`, `expires_at > now()`, `accepted_at is null`,
+         and requires `session.email = invitation.email` (case-insensitive).
+      2. Calls one transactional database function that inserts the
+         membership and sets `accepted_at = now()` atomically.
+    - Email mismatches are rejected server-side. There is no `force` flag or
+      cross-email confirmation path.
 - **Rationale**: Matches FR-007/008 + A17. Handling both "new user" and
   "existing user" cases via the same Supabase invite path avoids
   branching the UX.

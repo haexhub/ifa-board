@@ -113,7 +113,7 @@ Policies on `storage.objects` referencing the team-prefixed path:
 
 | Policy | For | Using |
 |---|---|---|
-| `tphoto_read_member` | select, authenticated | `bucket_id = 'training-photos' AND public.is_member(((storage.foldername(name))[1])::uuid)` |
+| `tphoto_read_member` | select, authenticated | `bucket_id = 'training-photos' AND public.is_member(((storage.foldername(name))[1])::uuid) AND EXISTS (SELECT 1 FROM public.trainings t WHERE t.id = ((storage.foldername(name))[2])::uuid AND t.team_id = ((storage.foldername(name))[1])::uuid AND (t.status = 'saved' OR public.is_trainer(t.team_id)))` |
 | `tphoto_write_trainer` | insert/update/delete, authenticated | `bucket_id = 'training-photos' AND public.is_trainer(((storage.foldername(name))[1])::uuid)` |
 
 **No** `anon` policies. Signed URLs for viewing are minted from a

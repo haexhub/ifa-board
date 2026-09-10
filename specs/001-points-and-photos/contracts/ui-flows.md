@@ -84,8 +84,9 @@ either `/start` (none) or `/t/<lastSlug>` (some).
 
 - If no session: input "E-Mail" (defaults to invitation email if
   fetchable via a public projection), "Anmelde-Link senden".
-- If session but email ≠ invitation email: confirm card explaining
-  the mismatch, "Trotzdem annehmen" or "Abmelden und neu anmelden".
+- If session but email ≠ invitation email: reject the invitation and show an
+  error explaining that the user must sign in with the invited email; there is
+  no "Trotzdem annehmen" override.
 - Else: card "<TeamName> lädt dich als <role> ein", "Annehmen" button
   → `POST /api/invitations/accept`.
 

@@ -79,19 +79,28 @@ prior outstanding invite for the same pair.
 
 Index: `create index invitations_email_open_idx on invitations(email) where accepted_at is null;`
 
-## user_profiles (view)
+## user_profiles (table)
 
-Public projection of `auth.users` for RLS-friendly display-name reads.
+RLS-protected profile projection for display-name reads. The profile row is
+created and synchronized by a `security definer` trigger owned by the database
+so clients never receive direct access to `auth.users`.
 
 ```sql
-create view public.user_profiles as
-  select id,
-         (raw_user_meta_data->>'display_name') as display_name
-  from auth.users;
+create table public.user_profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  display_name text
+);
+
+alter table public.user_profiles enable row level security;
+
+create policy user_profiles_read_team on public.user_profiles
+  for select to authenticated
+  using (public.is_profile_visible(id));
 ```
 
-Not a base table; no RLS on views — access is gated by whichever
-policies the caller's queries would hit via joins.
+`is_profile_visible` returns true only for the caller's own profile or a
+profile belonging to a user who shares a team with the caller. No `anon`
+policy exists.
 
 ## players
 
@@ -225,13 +234,14 @@ Written in migrations under `supabase/migrations/…_functions.sql`:
 
 - `public.get_team_ranking(p_team uuid, p_from date, p_to date) returns
   jsonb` — lexicographic sort by category `sort_order`, `sum(value)
-  desc`; ties via `dense_rank()`. Uses `is_member(p_team)` as a guard;
+  desc`; ties via competition `rank()`. Uses `is_member(p_team)` as a guard;
   returns null if not a member.
 - `public.get_player_scores_by_category(p_team uuid, p_player uuid,
   p_from date, p_to date) returns setof …` — one row per
   `(category_id, sum, avg, median)` for the player and timeframe.
 - `public.get_public_ranking(p_slug text, p_from date, p_to date)
-  returns jsonb` — `security invoker`, resolves slug internally, never
+  returns jsonb` — `security definer` owned by a constrained read-only role,
+  resolves slug internally, never
   returns team `id` or player names. Grant `execute` to `anon,
   authenticated`.
 
@@ -240,7 +250,11 @@ Written in migrations under `supabase/migrations/…_functions.sql`:
 - **Private** bucket.
 - Object keys are `<team_id>/<training_id>/<uuid>.<ext>`.
 - Read policy: `bucket_id = 'training-photos' AND
-  public.is_member(((storage.foldername(name))[1])::uuid)`.
+  public.is_member(((storage.foldername(name))[1])::uuid) AND EXISTS
+  (SELECT 1 FROM public.trainings t WHERE t.id =
+  ((storage.foldername(name))[2])::uuid AND t.team_id =
+  ((storage.foldername(name))[1])::uuid AND (t.status = 'saved' OR
+  public.is_trainer(t.team_id)))`.
 - Insert/delete policy: same, but `is_trainer` instead of `is_member`.
 
 ## Sequence of migrations (execution order for `/speckit-tasks`)
@@ -248,7 +262,7 @@ Written in migrations under `supabase/migrations/…_functions.sql`:
 1. `20260910120000_init_teams.sql` — `teams`, `memberships`,
    `invitations`.
 2. `20260910120500_helpers.sql` — `is_member`, `is_trainer`,
-   `user_profiles` view.
+   RLS-protected `user_profiles` table and profile sync trigger.
 3. `20260910121000_team_scoped_tables.sql` — `players`,
    `point_categories`, `trainings`, `training_photos`, `point_entries`,
    `team_settings`.

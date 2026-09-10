@@ -50,7 +50,7 @@ Constitution v1.0.0 ([`.specify/memory/constitution.md`](../../.specify/memory/c
 | Principle | Gate | Status |
 |---|---|---|
 | **I. Simplicity First** (NON-NEGOTIABLE) | No abstractions beyond the current requirement; single Nuxt project; Supabase used directly; no state manager unless a real cross-view need appears. | ✅ Pass. Multi-tenant model justified by explicit user requirement; no extra service layer; direct `useSupabaseClient` composables; team context lives in URL + a lightweight `useTeamContext` composable, not in a global store. |
-| **II. Role-Based Access via Supabase RLS** (NON-NEGOTIABLE) | Every table has RLS + at least one policy; Storage bucket policies match; anonymous public ranking served only via a dedicated view/function. Cross-team access is denied by policy, not by app-layer filter. | ✅ Pass. Every team-scoped table joins `memberships` in its policies via `public.is_member(team_id)` and `public.is_trainer(team_id)` helpers. Storage bucket path is team-prefixed and policy asserts membership on the path. Anonymous ranking via `SECURITY INVOKER` function granted to `anon`. Detailed contract in [contracts/rls-policies.md](./contracts/rls-policies.md). |
+| **II. Role-Based Access via Supabase RLS** (NON-NEGOTIABLE) | Every table has RLS + at least one policy; Storage bucket policies match; anonymous public ranking served only via a dedicated view/function. Cross-team access is denied by policy, not by app-layer filter. | ✅ Pass. Every team-scoped table joins `memberships` in its policies via `public.is_member(team_id)` and `public.is_trainer(team_id)` helpers. Storage bucket path is team-prefixed and policy asserts membership plus saved-training visibility. Anonymous ranking uses a narrowly projected `SECURITY DEFINER` function owned by a constrained read-only role. Detailed contract in [contracts/rls-policies.md](./contracts/rls-policies.md). |
 | **III. Konfigurierbare Punktekategorien** | Categories live as data, editable per team without deploy. | ✅ Pass. `point_categories` is a table scoped by `team_id`; trainer-only CRUD UI. |
 | **IV. Mobile-First UX** | Mobile-first Tailwind, ≥44px touch targets, primary flow works on portrait mobile. | ✅ Pass. Design starts at 360×640; grid + team selector + magic-link flow verified on mobile emulation in Polish phase. |
 | **V. Type Safety End-to-End** | Nuxt TS strict; Supabase types generated and committed; no `any` without justification. | ✅ Pass. `pnpm gen:types` after every schema-affecting migration; committed under `app/types/database.ts`. |
@@ -189,10 +189,10 @@ tsconfig.json
 the backend. Team-scoped routes live under `/t/[slug]/…`; onboarding
 routes live outside the team context so pre-membership users can access
 them. `server/api/` gains two thin routes — `/api/invitations/issue`
-and `/api/teams/create` — that need the service role for atomic
-operations (sending a magic-link email; creating team + first
-Trainer-Membership without a chicken-and-egg RLS violation). Nothing
-else moves off Supabase.
+and `/api/teams/create` — that use isolated server credentials only where
+needed (sending a magic-link email); team creation validates the browser
+session and delegates the team plus first Trainer-Membership insert to one
+transactional database function. Nothing else moves off Supabase.
 
 ## Complexity Tracking
 
