@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-09-10
-**Last Updated**: 2026-09-10 (nach `/speckit-clarify`)
+**Last Updated**: 2026-09-10 (Clarify Round 2 — scope re-baselined to multi-tenant)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -20,22 +20,32 @@
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [x] Scope is clearly bounded (Non-Goals NG-001..006 present; v1 = 1 team, Multi-Team ist v2)
-- [x] Dependencies and assumptions identified (A1..A15)
+- [x] Scope is clearly bounded (Multi-Tenant, Self-Signup, Magic-Link, per-Team-Rollen sind alle in v1)
+- [x] Dependencies and assumptions identified (A1..A17)
 
 ## Feature Readiness
 
 - [x] All functional requirements have clear acceptance criteria
-- [x] User scenarios cover primary flows (US1..US6)
-- [x] Feature meets measurable outcomes defined in Success Criteria
+- [x] User scenarios cover primary flows (US0..US6, US0 = Signup + Team-Onboarding)
+- [x] Feature meets measurable outcomes defined in Success Criteria (SC-001..010)
 - [x] No implementation details leak into specification
 
 ## Notes
 
-- Clarify-Session 2026-09-10: 4 gestellte Fragen, 4 beantwortet.
-  Q5 (Trainer-Team-Berechtigung) wurde übersprungen, weil sich mit der
-  finalen Antwort zu Multi-Team (v1 = 1 Team) die Frage erübrigt hat.
-- Wichtige v1-Entscheidungen: Foto-Consent per Flag; Player 1:1
-  User-Account (optional); jersey_number eindeutig unter aktiven
-  Spielern; v1 = eine Mannschaft mit Schema, das v2-Multi-Team-Migration
-  erlaubt.
+- **Clarify Round 2 hat den v1-Scope grundlegend erweitert.** plan.md und
+  tasks.md sind damit veraltet und MÜSSEN neu generiert werden
+  (`/speckit-plan` → `/speckit-tasks`).
+- Round-2-Entscheidungen (in [Clarifications-Session](../spec.md#clarifications)):
+  - Trikotnummer-Wechsel nur nach Deaktivierung des Alt-Spielers.
+  - Self-Signup offen; jeder Nutzer wählt beim ersten Team-Kontakt seine
+    Rolle (Team gründen ⇒ Trainer, Einladung annehmen ⇒ Trainer oder
+    Spieler je Einladung).
+  - Auth ist passwordless (Magic-Link).
+  - Rollen sind per Team (Membership-Modell). Ein Nutzer kann in
+    unterschiedlichen Teams unterschiedliche Rollen haben.
+  - Multi-Team in v1 (UI + Datenmodell).
+- Offen für Planning (nicht spec-blockierend):
+  - Konkrete Konfliktbehandlung bei gleichzeitigen Trainer-Edits
+    (Default: last-write-wins mit `last_updated_*` sichtbar).
+  - Season-Grenze pro Team konfigurierbar.
+  - Rate-Limiting auf Public-Route.

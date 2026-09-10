@@ -10,7 +10,28 @@ request)
 
 ## Clarifications
 
-### Session 2026-09-10
+### Session 2026-09-10 (round 2 — post-analyze)
+
+- Q: Trikotnummer-Wechsel im Kader? → A: Wechsel nur nach Deaktivierung
+  des Alt-Spielers. Sobald A auf inactive gesetzt ist, kann B die
+  Nummer erhalten. Edge Case wird entsprechend geschärft; Partial-
+  Unique-Index bleibt (unique jetzt pro Team, da Multi-Team, siehe unten).
+- Q: Trainer-Onboarding und weitere Trainer? → A: Self-Signup ist möglich;
+  neue Nutzer wählen bei der Anmeldung die Rolle (Trainer oder Spieler).
+  Trainer legen ihr eigenes Team an und laden weitere Nutzer via E-Mail
+  ein. Eine Einladung kann als Trainer- oder Spieler-Rolle im Team
+  ausgestellt werden.
+- Q: Auth-Methode? → A: Passwordless via Supabase Magic-Link. Kein
+  Password-Login in v1. Betrifft Trainer wie Spieler.
+- Q: Kann ein Nutzer in mehreren Teams unterschiedliche Rollen haben?
+  → A: Ja. Rollen sind pro Team (Team-Membership). Ein Trainer eines
+  eigenen Teams kann in einem anderen Team Spieler sein.
+- Q: Scope-Fork v1? → A: 1 = ja (Multi-Team-UI in v1), 2 = ja (Self-Signup
+  in v1). Die NG-001-Streichung ist damit endgültig; die App wird
+  multi-tenant. plan.md und tasks.md werden nach diesem Update neu
+  generiert.
+
+### Session 2026-09-10 (round 1)
 
 - Q: Wie regelt die App DSGVO/Foto-Einwilligung für (potentiell
   minderjährige) Spieler? → A: Pro Spieler `photo_consent` (bool, Default
@@ -32,6 +53,55 @@ request)
   alle Trainer sehen und bearbeiten das (einzige) Team.
 
 ## User Scenarios & Testing *(mandatory)*
+
+### User Story 0 - Nutzer registriert sich, gründet oder tritt einem Team bei (Priority: P1)
+
+Ein Nutzer öffnet die App zum ersten Mal auf dem Handy. Er gibt seine
+E-Mail ein und klickt auf den Magic-Link, den er per Mail erhält. Beim
+ersten Login trägt er seinen Anzeigenamen ein. Er landet auf einer
+Startseite mit zwei Optionen: **Team gründen** (er wird sofort Trainer
+seines neuen Teams und landet in dessen Trainer-UI) oder **auf
+Einladung warten** (er sieht offene, an seine E-Mail adressierte
+Einladungen und kann sie annehmen). Ein Trainer eines bestehenden
+Teams lädt weitere Nutzer per E-Mail mit vorwählbarer Rolle (Trainer
+oder Spieler) ein.
+
+**Why this priority**: Ohne diesen Flow gibt es keinen ersten Nutzer
+und kein Team. Alle anderen User Stories sind Team-scoped und
+brauchen mindestens ein Team + eine Trainer-Membership, um überhaupt
+zu starten.
+
+**Independent Test**: Frischer Browser ohne Session. Nutzer A
+registriert sich, gründet Team "Test-Team", lädt Nutzer B mit Rolle
+`player` ein. Nutzer B klickt Einladung an, meldet sich per
+Magic-Link an, sieht Team-Kontext "Test-Team" und hat player-Rechte.
+
+**Acceptance Scenarios**:
+
+1. **Given** ein neuer Besucher öffnet die App, **When** er seine
+   E-Mail eingibt und den Magic-Link klickt, **Then** wird ein
+   UserAccount angelegt (oder ein bestehender wiederverwendet), der
+   Nutzer landet in der Onboarding-Startseite mit den Optionen "Team
+   gründen" / "Einladung annehmen".
+2. **Given** ein eingeloggter Nutzer ohne Membership, **When** er
+   "Team gründen" wählt, Name eingibt und speichert, **Then** wird
+   das Team angelegt, ein `slug` generiert, eine `trainer`-Membership
+   für den Nutzer erstellt, und der Nutzer landet auf der
+   Trainer-Startseite des neuen Teams (`/t/<slug>`).
+3. **Given** ein Trainer eines Teams, **When** er unter "Team →
+   Mitglieder" die Aktion "Einladen" wählt, eine E-Mail-Adresse
+   eingibt und die Rolle wählt, **Then** wird eine Invitation erstellt
+   und eine E-Mail mit einem Magic-Link zum Team versendet.
+4. **Given** eine gültige Einladung, **When** der eingeladene Nutzer
+   den Link klickt, sich anmeldet und "Annehmen" bestätigt, **Then**
+   wird die Membership angelegt, `accepted_at` gesetzt, und der Nutzer
+   landet im Team-Kontext.
+5. **Given** ein Trainer versucht, die letzte Trainer-Membership des
+   Teams zu entfernen oder auf `player` zu wechseln, **When** er
+   speichern will, **Then** wird die Aktion mit Fehler abgelehnt:
+   "Ein Team muss mindestens einen Trainer haben."
+
+---
 
 ### User Story 1 - Trainer erfasst Punkte und Foto für ein Training (Priority: P1)
 
@@ -259,46 +329,104 @@ Foto-URLs schlägt fehl.
 - **Spieler wurde deaktiviert, ist aber in historischem Training bewertet**:
   Seine historischen Werte sind sichtbar und werden in Auswertungen für
   Zeiträume, in denen er aktiv war, gezählt.
-- **Zwei Spieler mit derselben Trikotnummer**: Erlaubt (z. B. Wechsel im
-  Kader); die anonyme Ansicht listet beide getrennt, jeweils mit
-  derselben Nummer, sortiert nach Rangposition.
+- **Trikotnummer-Wechsel im Kader** (Nummer geht auf Nachfolger über):
+  Der Trainer MUSS den Alt-Spieler zuerst auf `active = false` setzen;
+  danach kann der Nachfolger dieselbe Nummer erhalten. Ein Versuch,
+  einer aktiven Person die Nummer eines anderen aktiven Spielers zu
+  geben, wird durch den Partial-Unique-Index abgewiesen. Zwei Spieler
+  mit derselben aktuellen Nummer im aktiven Kader sind NIE zulässig.
+  In der Historie kann eine Nummer wiederholt auftauchen (Alt-Spieler
+  inaktiv, Nachfolger aktiv).
 - **Kein Spieler hat Punkte im gewählten Zeitraum**: Rangliste zeigt eine
   leere Tabelle mit klarer Meldung ("Keine Punkte im gewählten Zeitraum").
 - **Alle aktiven Kategorien führen zu Gleichstand zwischen zwei Spielern**:
   Beide erhalten dieselbe Rangposition, die nächste Rangposition zählt um
   die Anzahl der Gleichstandsplätze weiter (Standard-Sportranking, z. B.
   1, 2, 2, 4).
+- **Letzter Trainer verlässt ein Team**: Die Aktion wird blockiert
+  (FR-072). Der Trainer muss zuerst einen anderen Nutzer zum
+  Trainer-Rang erheben.
+- **Einladung an eine bereits gemitgliedete E-Mail**: Wenn die
+  Zieladresse bereits eine Membership im Team hat, wird die Einladung
+  mit Hinweis abgelehnt. Wenn die Adresse eine Einladung mit anderer
+  Rolle bereits offen hat, wird die alte widerrufen und die neue
+  ausgestellt.
+- **Nutzer klickt abgelaufene Einladung**: Klarer Hinweis "Einladung
+  abgelaufen"; der Nutzer bleibt eingeloggt, aber ohne neue Membership.
+- **Nutzer mit Membership in mehreren Teams**: Team-Selector oben in
+  der App-Nav; letzter aktiver Team-Kontext wird in `localStorage`
+  persistiert und beim Login wiederhergestellt. Direkte URLs
+  (`/t/<slug>/…`) wechseln den Kontext ohne extra Aktion.
+- **Slug-Kollision beim Team-Anlegen**: Automatisch abgeleiteter Slug
+  wird bei Kollision mit einem Zähler suffigiert (z. B. `sv-c1`,
+  `sv-c1-2`). Manuell eingegebener Slug wird bei Kollision im Form-
+  Fehler abgelehnt.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-**Accounts & Rollen**
+**Accounts, Auth & Rollen (per Team)**
 
-- **FR-001**: Das System MUSS zwei Rollen unterstützen: `trainer` und
-  `player`. Jeder authentifizierte Nutzer hat genau eine Rolle.
-- **FR-002**: Trainer MÜSSEN Schreib- und Leserechte auf Trainings, Spieler,
-  Punktekategorien, Punkteinträge und Trainingsfotos haben.
-- **FR-003**: Spieler MÜSSEN Leserechte auf: Rangliste des Teams, eigenes
-  Detail-Punktprofil, aggregierte Team-Statistik (Durchschnitt, Median),
-  Trainingsübersicht und Trainingsfotos haben.
-- **FR-004**: Der initiale Trainer-Account wird direkt im Auth-System des
-  Backend-Providers angelegt (Assumption A1). Weitere Trainer-Accounts
-  MÜSSEN durch einen bestehenden Trainer über die App anlegbar sein.
-- **FR-005**: Spieler-Accounts MÜSSEN durch einen Trainer über die App
-  anlegbar oder per E-Mail einladbar sein. Ein Player kann jederzeit ohne
-  User-Account existieren (Kader-nur-Eintrag); ein Account ist nicht
-  Voraussetzung für das Anlegen eines Players. Die Verknüpfung
-  Player ↔ User-Account ist 1:1 (ein Account gehört zu genau einem
-  Player; ein Player hat maximal einen Account). Verknüpfung erfolgt
-  entweder beim Einladen (Trainer wählt existierenden Player und lädt
-  ihn per E-Mail ein) oder nachträglich (Trainer verknüpft bestehenden
-  Account mit bestehendem Player). Aufheben der Verknüpfung entfernt den
-  personalisierten Zugriff des Spielers, lässt aber die Punkte-Historie
-  des Players unangetastet.
+- **FR-001**: Das System MUSS zwei Rollen pro Team unterstützen: `trainer`
+  und `player`. Rollen sind an eine Team-Membership gebunden, nicht an den
+  Nutzer selbst. Ein Nutzer kann in Team A Trainer und in Team B Spieler
+  sein.
+- **FR-002**: Ein Nutzer mit `trainer`-Membership in Team X MUSS Schreib-
+  und Leserechte auf ALLE team-scoped Ressourcen von X haben (Trainings,
+  Spieler, Kategorien, Punkteinträge, Fotos, Team-Einstellungen,
+  Memberships). Er hat KEINE Rechte in Teams, in denen er nicht
+  Trainer-Membership hat.
+- **FR-003**: Ein Nutzer mit `player`-Membership in Team X MUSS Leserechte
+  in X haben: Rangliste, eigenes Detail-Profil, aggregierte Team-Statistik,
+  Trainingsübersicht, Fotos. Analog: keine Rechte in fremden Teams.
+- **FR-004**: Auth erfolgt via **Magic-Link** (One-Time-Password per
+  E-Mail). Es gibt kein Password-Login in v1. Registrierung und Login
+  laufen über denselben Magic-Link-Flow; beim ersten Login trägt der
+  Nutzer seinen Anzeigenamen ein.
+- **FR-005**: Self-Signup ist offen: ein neuer Nutzer registriert sich mit
+  seiner E-Mail via Magic-Link. Danach hat der Nutzer noch keine
+  Team-Membership. Er MUSS wählen: entweder (a) ein neues Team gründen
+  (er wird `trainer`-Membership des neuen Teams) oder (b) eine
+  Einladung eines bestehenden Trainers annehmen (er wird `trainer`- oder
+  `player`-Membership des einladenden Teams, je nach Einladungs-Rolle).
+  Ohne Team-Membership sieht der Nutzer nur die Startseite mit den
+  beiden Optionen.
 - **FR-006**: Nicht authentifizierte Anfragen MÜSSEN abgelehnt werden für
-  alle Daten, ausgenommen die anonyme öffentliche Rangliste (siehe FR-060
-  ff.). Foto-Assets sind IMMER auf authentifizierte Nutzer beschränkt.
+  alle Daten, ausgenommen die anonymen öffentlichen Ranglisten pro Team
+  (siehe FR-060 ff.). Foto-Assets sind IMMER auf authentifizierte Nutzer
+  mit passender Team-Membership beschränkt.
+- **FR-007**: Trainer eines Teams MÜSSEN weitere Nutzer per E-Mail zum Team
+  einladen können. Beim Ausstellen der Einladung wählt der Trainer die
+  Rolle (`trainer` oder `player`). Der Einladungslink führt beim Klick
+  zum Magic-Link-Login und legt bei Annahme die Membership an.
+- **FR-008**: Eine Einladung MUSS folgende Attribute tragen: `team_id`,
+  `email`, `role`, `invited_by`, `expires_at` (z. B. 14 Tage),
+  `accepted_at` (nullbar). Nicht akzeptierte Einladungen sind abrufbar
+  und widerrufbar durch die Trainer des Teams.
+
+**Team-Management**
+
+- **FR-070**: Ein Nutzer MUSS ein neues Team anlegen können. Beim Anlegen
+  gibt er `name` (Pflicht) und optional `slug` (falls leer: automatisch
+  aus `name` abgeleitet) an. Der anlegende Nutzer erhält automatisch
+  eine `trainer`-Membership.
+- **FR-071**: Jedes Team hat einen eindeutigen, URL-tauglichen `slug`
+  (z. B. `sv-musterstadt-c1`). Der Slug ist ab dem Zeitpunkt der Vergabe
+  stabil und wird für öffentliche Routen (FR-060 ff.) verwendet.
+- **FR-072**: Ein Nutzer mit Trainer-Membership MUSS in seinen Teams
+  Trainer- und Player-Memberships anderer Nutzer sehen, ändern (Rolle
+  wechseln) und entfernen können. Er DARF nicht die letzte verbleibende
+  Trainer-Membership eines Teams entfernen (Guard gegen "Team
+  verwaist").
+- **FR-073**: Ein Nutzer MUSS sich selbst aus einem Team entfernen können
+  (Membership löschen), außer er ist der letzte verbleibende Trainer
+  (siehe FR-072).
+- **FR-074**: Der aktuelle Team-Kontext MUSS in der URL erkennbar sein
+  (z. B. `/t/<slug>/…`). Nach dem Login wird der zuletzt aktive
+  Team-Kontext wiederhergestellt; hat der Nutzer keine Membership,
+  landet er auf einer Startseite mit den Optionen "Team gründen" und
+  "auf Einladung warten".
 
 **Trainings**
 
@@ -372,9 +500,11 @@ Foto-URLs schlägt fehl.
 
 **Auswertungen**
 
-- **FR-050**: Das System MUSS eine Rangliste über einen wählbaren
+- **FR-050**: Das System MUSS pro Team eine Rangliste über einen wählbaren
   Zeitraum anzeigen. Zeitraum-Optionen: "Letzte 4 Wochen", "Saison",
   "Benutzerdefiniert (von–bis)". Standard: "Saison" (Assumption A4).
+  Ranglisten sind IMMER team-intern; es gibt keine team-übergreifende
+  Rangliste in v1.
 - **FR-051**: Die Rangposition MUSS lexikographisch nach der Reihenfolge der
   Kategorien (aufsteigend nach `sort_order`) berechnet werden. Innerhalb
   jeder Kategorie wird nach `SUM(value)` über den gewählten Zeitraum
@@ -399,8 +529,9 @@ Foto-URLs schlägt fehl.
 
 **Anonyme öffentliche Rangliste**
 
-- **FR-060**: Das System MUSS eine anonyme öffentliche Rangliste
-  bereitstellen, die OHNE Login abrufbar ist.
+- **FR-060**: Das System MUSS pro Team eine anonyme öffentliche Rangliste
+  bereitstellen, die OHNE Login abrufbar ist. Die Route enthält den
+  Team-`slug` (z. B. `/public/<slug>/ranking`).
 - **FR-061**: In der anonymen Ansicht werden Spieler ausschließlich über ihre
   `jersey_number` identifiziert. Klartext-Namen, `position`,
   `linked_user_id` und alle sonstigen personenidentifizierenden Attribute
@@ -419,12 +550,11 @@ Foto-URLs schlägt fehl.
 
 **Nicht-Ziele (v1)**
 
-- **NG-001**: Mehr-Teams-Fähigkeit ist in v1 ausgeschlossen. Das System
-  betreibt in v1 genau eine Mannschaft (die vom Trainer aktuell primär
-  betreute). Der Verein hat perspektivisch ≥4 Mannschaften (3×
-  C-Mannschaft + 1× B-Jugend); Multi-Team ist bewusste v2-Erweiterung.
-  Datenmodell/Schema in v1 sind so anzulegen, dass eine spätere
-  `team_id`-Migration ohne Datenverlust möglich ist (siehe A15).
+- ~~**NG-001**~~ (endgültig gestrichen in Clarify Round 2): Multi-Team ist
+  ausdrücklich Bestandteil von v1. Das System ist multi-tenant:
+  beliebig viele Teams; jedes Team hat einen unabhängigen Kader,
+  Kategorien, Trainings und Auswertungen; Nutzer haben Team-scoped
+  Rollen via Memberships.
 - **NG-002**: Push-Notifications, In-App-Chat und Kommentare auf Trainings
   sind ausgeschlossen.
 - **NG-003**: Trainingsplanung/Kalender ist ausgeschlossen.
@@ -436,29 +566,46 @@ Foto-URLs schlägt fehl.
 
 ### Key Entities
 
-- **Player**: Ein Kadermitglied. Attribute: `name` (Pflicht), `active`,
-  `jersey_number` (optional, eindeutig unter aktiven Spielern),
-  `position` (optional), `linked_user_id` (optional, 1:1),
-  `photo_consent` (bool, Default `false`).
-- **PointCategory**: Ein Bewertungskriterium. Attribute: `name`,
-  `active`, `sort_order`, `value_min`, `value_max`.
-- **Training**: Eine Trainingseinheit. Attribute: `date` (Pflicht),
-  `title` (optional), `note` (optional), `created_by` (Trainer),
-  `created_at`, `last_updated_at`, `last_updated_by`.
-- **PointEntry**: Ein Punktwert eines Spielers in einer Kategorie für ein
-  Training. Attribute: `training_id`, `player_id`, `category_id`, `value`,
-  `last_updated_at`, `last_updated_by`. Fehlender Eintrag bedeutet "nicht
-  bewertet".
+- **Team**: Eine Mannschaft. Attribute: `id`, `name` (Pflicht, z. B.
+  "SV Musterstadt C1"), `slug` (Pflicht, eindeutig, URL-tauglich),
+  `created_by` (Nutzer, der das Team gegründet hat), `created_at`.
+- **UserAccount**: Ein Auth-Konto (Supabase `auth.users`). Attribute:
+  `id`, `email` (aus Supabase), `display_name` (aus User-Metadata bzw.
+  Onboarding). Keine globale Rolle — Rollen entstehen über Memberships.
+- **Membership**: Eine Team-Rolle-Zuordnung. Attribute: `user_id`,
+  `team_id`, `role` (`trainer` | `player`), `created_at`. Primärschlüssel
+  (`user_id`, `team_id`) — ein Nutzer hat pro Team höchstens eine
+  Membership. Guard: ein Team MUSS mindestens eine `trainer`-Membership
+  behalten (FR-072).
+- **Invitation**: Eine ausgestellte Team-Einladung. Attribute:
+  `team_id`, `email`, `role` (`trainer` | `player`), `invited_by`,
+  `created_at`, `expires_at`, `accepted_at` (nullbar), `token`
+  (URL-tauglich, eindeutig).
+- **Player**: Ein Kadermitglied EINES Teams. Attribute: `team_id`
+  (Pflicht), `name` (Pflicht), `active`, `jersey_number` (optional,
+  eindeutig unter aktiven Spielern desselben Teams), `position`
+  (optional), `linked_user_id` (optional, 1:1 zu UserAccount),
+  `photo_consent` (bool, Default `false`). Der verknüpfte Nutzer MUSS
+  eine `player`-Membership im selben Team haben, damit die Verknüpfung
+  gültig ist.
+- **PointCategory**: Ein Bewertungskriterium EINES Teams. Attribute:
+  `team_id`, `name`, `active`, `sort_order`, `value_min`, `value_max`.
+  Kategorien werden pro Team gepflegt.
+- **Training**: Eine Trainingseinheit EINES Teams. Attribute: `team_id`
+  (Pflicht), `date` (Pflicht), `title` (optional), `note` (optional),
+  `status` (`draft` | `saved`), `created_by`, `created_at`,
+  `last_updated_at`, `last_updated_by`.
+- **PointEntry**: Ein Punktwert eines Spielers in einer Kategorie für
+  ein Training. Attribute: `training_id`, `player_id`, `category_id`,
+  `value`, `last_updated_at`, `last_updated_by`. Fehlender Eintrag
+  bedeutet "nicht bewertet". Konsistenz-Constraint: `training.team_id`
+  = `player.team_id` = `category.team_id`.
 - **TrainingPhoto**: Ein Foto zu einem Training. Attribute: `training_id`,
-  `storage_path`, `content_type`, `size_bytes`, `uploaded_by`,
-  `uploaded_at`. Mindestens 1 pro Training.
-- **UserAccount**: Ein Auth-Konto mit Rolle `trainer` oder `player`; für
-  Spieler-Konten kann eine Verknüpfung zu genau einem Player bestehen.
-  In v1 sehen und bearbeiten alle Trainer alle Daten (kein Team-Scoping,
-  siehe A15).
-- **AuditFields** (nicht eigene Entity, aber Konvention): `created_at`,
-  `created_by`, `last_updated_at`, `last_updated_by` auf jeder mutierbaren
-  Entity.
+  `storage_path` (im Bucket team-präfigiert, z. B.
+  `<team_id>/<training_id>/<uuid>.jpg`), `content_type`, `size_bytes`,
+  `uploaded_by`, `uploaded_at`. Mindestens 1 pro Training.
+- **AuditFields** (Konvention): `created_at`, `created_by`,
+  `last_updated_at`, `last_updated_by` auf jeder mutierbaren Entity.
 
 ## Success Criteria *(mandatory)*
 
@@ -485,19 +632,27 @@ Foto-URLs schlägt fehl.
   spalte verfügbar, ohne Code-Änderung oder Deploy.
 - **SC-007**: Historische Auswertungen für einen deaktivierten Spieler
   bleiben sichtbar und unverändert nach seiner Deaktivierung.
-- **SC-008**: 100 % der Anfragen an den öffentlichen Rangliste-Pfad ohne
-  Session liefern ausschließlich das in FR-062 definierte Datenschema;
-  jeder Versuch, personenidentifizierende Attribute (Namen, Fotos,
-  Detail-Zeitverläufe) über diesen Pfad zu beziehen, wird abgelehnt
-  (verifiziert durch mindestens einen negativen Testfall pro geschützter
-  Ressource).
+- **SC-008**: 100 % der Anfragen an den öffentlichen Rangliste-Pfad
+  (`/public/<slug>/ranking`) ohne Session liefern ausschließlich das in
+  FR-062 definierte Datenschema; jeder Versuch, personenidentifizierende
+  Attribute (Namen, Fotos, Detail-Zeitverläufe) über diesen Pfad zu
+  beziehen, wird abgelehnt (verifiziert durch mindestens einen negativen
+  Testfall pro geschützter Ressource).
+- **SC-009**: 100 % der Cross-Team-Zugriffe werden abgelehnt: ein Nutzer
+  mit Membership nur in Team A darf per direktem API-Zugriff KEINE Daten
+  (Trainings, Player, Entries, Photos, Kategorien, Memberships,
+  Einstellungen) von Team B lesen oder schreiben. Verifiziert durch eine
+  Test-Matrix "Team A ↔ Team B, Rolle × Ressource".
+- **SC-010**: Ein neu registrierter Nutzer kann von "E-Mail eingeben"
+  bis "Team gegründet und Trainer-UI sichtbar" in ≤3 Minuten (inklusive
+  Magic-Link-Empfang) auf dem Handy durchlaufen.
 
 ## Assumptions
 
-- **A1**: Initialer Trainer-Login wird direkt im Auth-System des Backend-
-  Providers angelegt (nicht über die App). Weitere Trainer werden per
-  App-Oberfläche angelegt. Rationale: einfachster Start-Zustand, kein
-  Bootstrapping-Problem.
+- **A1**: (überholt in Round 2) Kein Bootstrap-Trainer nötig. Jeder
+  Nutzer registriert sich per Magic-Link und gründet bei Bedarf ein
+  eigenes Team; damit wird er automatisch dessen Trainer. Weitere
+  Trainer und Spieler werden per Team-Einladung geladen.
 - **A2**: Einzel-Foto-Limit 10 MB. Rationale: bequemer Upload vom Handy
   ohne aufwändige Client-Kompression; genug für Handy-Aufnahmen.
 - **A3**: Zulässige Foto-Formate: JPEG, PNG, HEIC/HEIF, WebP. Rationale:
@@ -535,14 +690,27 @@ Foto-URLs schlägt fehl.
   v1. Die dokumentierte schriftliche Einwilligung wird außerhalb der App
   (Elternabend, Vereinsantrag) erfasst; der Trainer überträgt sie als
   Flag in die App.
-- **A13**: `jersey_number` ist eindeutig unter aktiven Spielern.
-  Deaktivierte Spieler blockieren keine Nummer.
-- **A14**: In v1 sehen und bearbeiten alle Trainer alle Daten (keine
-  Trainer-Team-Zuordnung, weil in v1 nur eine Mannschaft geführt wird).
-- **A15**: Multi-Team ist bekannter zukünftiger Bedarf (Verein hat 4
-  Mannschaften: 3× C + 1× B-Jugend). v1 bildet genau EIN Team ab; das
-  Schema wird so gewählt, dass eine spätere `team_id`-Migration auf
-  allen team-fähigen Tabellen (players, trainings, point_categories)
-  ohne Datenverlust möglich ist (z. B. via Backfill mit
-  `team_id = <default-team>` beim Migrationsschritt). Kein Code für
-  Multi-Team-UI in v1, kein Team-Selector, kein Team-Slug in URLs.
+- **A13**: `jersey_number` ist eindeutig unter aktiven Spielern desselben
+  Teams. Team-übergreifende Kollisionen sind zulässig (Nummer 7 in
+  Team A und Team B können unterschiedliche Personen sein). Deaktivierte
+  Spieler blockieren keine Nummer. Wechsel innerhalb eines Teams erst
+  nach Deaktivierung des Alt-Spielers.
+- **A14**: Auth ist **passwordless via Magic-Link** (Supabase OTP per
+  E-Mail). Kein Passwortfeld in v1. Rationale: einfacher für gemischtes
+  Alters-Publikum, kein Password-Reset-Support-Kanal nötig, Registrierung
+  und Login teilen denselben Flow.
+- **A15**: Rollen sind pro Team (Membership-Modell). Ein Nutzer kann in
+  Team X Trainer und in Team Y Spieler sein. RLS-Policies joinen über
+  `memberships` (nicht mehr über eine globale `role`-Spalte). Ein Team
+  MUSS jederzeit mindestens eine Trainer-Membership behalten.
+- **A16**: Self-Signup ist offen (jeder mit E-Mail kann sich anmelden).
+  Missbrauchs-Schutz erfolgt via Supabase-eingebautem Rate-Limiting auf
+  Magic-Link-Requests (kein separater App-Level-Limiter in v1). Ein
+  frisch angelegter Nutzer OHNE Membership sieht nur die Startseite
+  ("Team gründen" oder "Einladung annehmen"); er hat weder Lese- noch
+  Schreibrechte auf existierende Team-Daten.
+- **A17**: Einladungen laufen nach 14 Tagen ab. Trainer eines Teams
+  können ausstehende Einladungen einsehen und widerrufen. Nach Annahme
+  wird die Einladung als `accepted_at` markiert und die Membership
+  angelegt; wiederholte Klicks auf denselben Link nach Annahme führen
+  zum normalen Team-Kontext, nicht zu einer neuen Membership.
