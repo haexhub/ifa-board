@@ -1,0 +1,40 @@
+# Nuxt
+.nuxt/
+.output/
+.data/
+dist/
+
+# Node
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Supabase local
+.supabase/
+supabase/.temp/
+
+# Vercel
+.vercel/

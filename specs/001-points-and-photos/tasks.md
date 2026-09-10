@@ -31,20 +31,20 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 **Purpose**: Bootstrap Nuxt + Supabase + tooling.
 
-- [ ] T001 Initialize pnpm workspace at repo root with `pnpm init`, set `packageManager: pnpm@9.x` and `engines.node: ">=22 <23"` in `package.json`
-- [ ] T002 Scaffold Nuxt 3 structure (`nuxt.config.ts`, `tsconfig.json`, `app/`, `.gitignore`) with `pnpm dlx nuxi@latest init`
-- [ ] T003 [P] Add app dependencies to `package.json`: `nuxt`, `@nuxtjs/supabase`, `@nuxtjs/tailwindcss`, `@vueuse/core`, `zod`, `@unovis/vue`, `@unovis/ts`, `@supabase/supabase-js`, `slug`
-- [ ] T004 [P] Add dev dependencies to `package.json`: `typescript`, `vitest`, `@nuxt/test-utils`, `@playwright/test`, `eslint`, `prettier`, `supabase`
-- [ ] T005 Configure `nuxt.config.ts`: enable `@nuxtjs/supabase` and `@nuxtjs/tailwindcss` modules; set `typescript.strict = true` and `typescript.typeCheck = true`; set `ssr: true`; configure `supabase.redirectOptions` to exclude `/login`, `/callback`, `/public/**`, `/invite/**`
-- [ ] T006 [P] Initialize Tailwind mobile-first in `tailwind.config.ts` and `app/assets/css/main.css`; wire into `nuxt.config.ts`
-- [ ] T007 [P] Install shadcn-vue via `pnpm dlx shadcn-vue@latest init` (New York style, TypeScript, `app/components/ui`); commit `components.json`
-- [ ] T008 [P] Configure ESLint + Prettier in `.eslintrc.cjs` + `.prettierrc`; add `lint` and `format` scripts to `package.json`
-- [ ] T009 Initialize local Supabase via `supabase init`; commit `supabase/config.toml`; enable Inbucket for local email capture
-- [ ] T010 [P] Add `.env.example` at repo root with `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`
-- [ ] T011 [P] Add pnpm scripts to `package.json`: `dev`, `build`, `preview`, `typecheck`, `test:unit`, `test:e2e`, `gen:types`, `db:reset`
-- [ ] T012 [P] Configure `playwright.config.ts` with `webServer` running `pnpm dev` on `http://localhost:3000`
-- [ ] T013 [P] Configure `vitest.config.ts` with `@nuxt/test-utils/config` and `jsdom` environment
-- [ ] T014 Add `.gitignore` entries: `.env`, `.output/`, `.nuxt/`, `node_modules/`, `dist/`, `playwright-report/`, `.supabase/`
+- [X] T001 Initialize pnpm workspace at repo root with `pnpm init`, set `packageManager: pnpm@9.x` and `engines.node: ">=22 <23"` in `package.json`
+- [X] T002 Scaffold Nuxt 3 structure (`nuxt.config.ts`, `tsconfig.json`, `app/`, `.gitignore`) with `pnpm dlx nuxi@latest init`
+- [X] T003 [P] Add app dependencies to `package.json`: `nuxt`, `@nuxtjs/supabase`, `@nuxtjs/tailwindcss`, `@vueuse/core`, `zod`, `@unovis/vue`, `@unovis/ts`, `@supabase/supabase-js`, `slug`
+- [X] T004 [P] Add dev dependencies to `package.json`: `typescript`, `vitest`, `@nuxt/test-utils`, `@playwright/test`, `eslint`, `prettier`, `supabase`
+- [X] T005 Configure `nuxt.config.ts`: enable `@nuxtjs/supabase` and `@nuxtjs/tailwindcss` modules; set `typescript.strict = true` and `typescript.typeCheck = true`; set `ssr: true`; configure `supabase.redirectOptions` to exclude `/login`, `/callback`, `/public/**`, `/invite/**`
+- [X] T006 [P] Initialize Tailwind mobile-first in `tailwind.config.ts` and `app/assets/css/main.css`; wire into `nuxt.config.ts`
+- [X] T007 [P] Install shadcn-vue via `pnpm dlx shadcn-vue@latest init` (New York style, TypeScript, `app/components/ui`); commit `components.json`
+- [X] T008 [P] Configure ESLint + Prettier in `.eslintrc.cjs` + `.prettierrc`; add `lint` and `format` scripts to `package.json`
+- [X] T009 Initialize local Supabase via `supabase init`; commit `supabase/config.toml`; enable Inbucket for local email capture
+- [X] T010 [P] Add `.env.example` at repo root with `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`
+- [X] T011 [P] Add pnpm scripts to `package.json`: `dev`, `build`, `preview`, `typecheck`, `test:unit`, `test:e2e`, `gen:types`, `db:reset`
+- [X] T012 [P] Configure `playwright.config.ts` with `webServer` running `pnpm dev` on `http://localhost:3000`
+- [X] T013 [P] Configure `vitest.config.ts` with `@nuxt/test-utils/config` and `jsdom` environment
+- [X] T014 Add `.gitignore` entries: `.env`, `.output/`, `.nuxt/`, `node_modules/`, `dist/`, `playwright-report/`, `.supabase/`
 
 **Checkpoint**: `pnpm dev` boots empty Nuxt; `supabase start` boots Postgres+Auth+Inbucket.
 

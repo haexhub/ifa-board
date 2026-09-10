@@ -1,0 +1,9 @@
+.output/
+.nuxt/
+dist/
+node_modules/
+coverage/
+playwright-report/
+supabase/migrations/
+app/types/database.ts
+pnpm-lock.yaml
