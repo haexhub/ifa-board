@@ -8,6 +8,29 @@ mit der Trainer pro Training Punkte an Spieler vergeben können, und Spieler ihr
 eigene Entwicklung im Zeitverlauf sehen." (full brief captured in the feature
 request)
 
+## Clarifications
+
+### Session 2026-09-10
+
+- Q: Wie regelt die App DSGVO/Foto-Einwilligung für (potentiell
+  minderjährige) Spieler? → A: Pro Spieler `photo_consent` (bool, Default
+  `false`); Fotos von Spielern ohne Consent werden ausgeblendet/unscharf,
+  Trainer sieht Warnhinweis beim Upload.
+- Q: Wie ist die Beziehung zwischen Player und User-Account? → A: Player
+  kann ohne Account existieren; 1:1-Beziehung wenn verknüpft; ein
+  Account gehört zu genau einem Player, ein Player hat maximal einen
+  Account. Einladung optional durch Trainer, nachträglich möglich.
+- Q: Ist `jersey_number` eindeutig, und in welchem Scope? → A: Eindeutig
+  unter aktiven Spielern. Deaktivierte Spieler blockieren keine Nummer.
+- Q: Multi-Team-Umfang für v1? → A: v1 hat GENAU EIN Team (das aktuell
+  betreute). Multi-Team ist bekannter zukünftiger Bedarf (im Verein
+  aktuell 4 Mannschaften: 3× C-Mannschaft + 1× B-Jugend, Aufstockung
+  perspektivisch möglich), wird aber bewusst NICHT in v1 implementiert
+  (Constitution-Prinzip I: Simplicity First). Datenmodell und Schema
+  sind so zu wählen, dass eine spätere `team_id`-Migration ohne
+  Datenverlust möglich ist. Trainer-Team-Berechtigung entfällt in v1;
+  alle Trainer sehen und bearbeiten das (einzige) Team.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Trainer erfasst Punkte und Foto für ein Training (Priority: P1)
@@ -263,7 +286,16 @@ Foto-URLs schlägt fehl.
   Backend-Providers angelegt (Assumption A1). Weitere Trainer-Accounts
   MÜSSEN durch einen bestehenden Trainer über die App anlegbar sein.
 - **FR-005**: Spieler-Accounts MÜSSEN durch einen Trainer über die App
-  anlegbar oder per E-Mail einladbar sein.
+  anlegbar oder per E-Mail einladbar sein. Ein Player kann jederzeit ohne
+  User-Account existieren (Kader-nur-Eintrag); ein Account ist nicht
+  Voraussetzung für das Anlegen eines Players. Die Verknüpfung
+  Player ↔ User-Account ist 1:1 (ein Account gehört zu genau einem
+  Player; ein Player hat maximal einen Account). Verknüpfung erfolgt
+  entweder beim Einladen (Trainer wählt existierenden Player und lädt
+  ihn per E-Mail ein) oder nachträglich (Trainer verknüpft bestehenden
+  Account mit bestehendem Player). Aufheben der Verknüpfung entfernt den
+  personalisierten Zugriff des Spielers, lässt aber die Punkte-Historie
+  des Players unangetastet.
 - **FR-006**: Nicht authentifizierte Anfragen MÜSSEN abgelehnt werden für
   alle Daten, ausgenommen die anonyme öffentliche Rangliste (siehe FR-060
   ff.). Foto-Assets sind IMMER auf authentifizierte Nutzer beschränkt.
@@ -323,10 +355,24 @@ Foto-URLs schlägt fehl.
   abgelehnt.
 - **FR-043**: Unterstützte Formate: JPEG, PNG, HEIC/HEIF, WebP (Assumption
   A3).
+- **FR-044**: Jeder Spieler hat ein Attribut `photo_consent` (bool,
+  Default `false`). Trainer MÜSSEN `photo_consent` pro Spieler in der
+  Spielerverwaltung setzen können.
+- **FR-045**: Beim Anzeigen von Fotos MUSS das System für jeden erkennbaren
+  Spieler ohne `photo_consent = true` das Foto entweder ausblenden oder
+  eine Consent-Blur-Overlay-Darstellung liefern. Die konkrete
+  Standardstrategie ist: Foto komplett ausblenden, sobald mindestens ein
+  Spieler ohne Consent im Foto markiert ist ODER kein Consent-Status
+  vermerkt ist. (Eine gezielte Gesichts-/Personenerkennung ist NICHT Teil
+  von v1 — siehe A12.)
+- **FR-046**: Beim Hochladen eines Fotos MUSS der Trainer eine Warnung
+  sehen, falls einer der aktuell aktiven Kaderspieler `photo_consent =
+  false` hat, mit dem Hinweis, dass Fotos mit diesem Spieler für andere
+  ausgeblendet werden.
 
 **Auswertungen**
 
-- **FR-050**: Das System MUSS eine Team-Rangliste über einen wählbaren
+- **FR-050**: Das System MUSS eine Rangliste über einen wählbaren
   Zeitraum anzeigen. Zeitraum-Optionen: "Letzte 4 Wochen", "Saison",
   "Benutzerdefiniert (von–bis)". Standard: "Saison" (Assumption A4).
 - **FR-051**: Die Rangposition MUSS lexikographisch nach der Reihenfolge der
@@ -353,8 +399,8 @@ Foto-URLs schlägt fehl.
 
 **Anonyme öffentliche Rangliste**
 
-- **FR-060**: Das System MUSS eine anonyme öffentliche Rangliste bereitstellen,
-  die OHNE Login abrufbar ist.
+- **FR-060**: Das System MUSS eine anonyme öffentliche Rangliste
+  bereitstellen, die OHNE Login abrufbar ist.
 - **FR-061**: In der anonymen Ansicht werden Spieler ausschließlich über ihre
   `jersey_number` identifiziert. Klartext-Namen, `position`,
   `linked_user_id` und alle sonstigen personenidentifizierenden Attribute
@@ -373,8 +419,12 @@ Foto-URLs schlägt fehl.
 
 **Nicht-Ziele (v1)**
 
-- **NG-001**: Mehr-Teams-Fähigkeit ist ausgeschlossen; das System betreibt
-  genau eine Mannschaft.
+- **NG-001**: Mehr-Teams-Fähigkeit ist in v1 ausgeschlossen. Das System
+  betreibt in v1 genau eine Mannschaft (die vom Trainer aktuell primär
+  betreute). Der Verein hat perspektivisch ≥4 Mannschaften (3×
+  C-Mannschaft + 1× B-Jugend); Multi-Team ist bewusste v2-Erweiterung.
+  Datenmodell/Schema in v1 sind so anzulegen, dass eine spätere
+  `team_id`-Migration ohne Datenverlust möglich ist (siehe A15).
 - **NG-002**: Push-Notifications, In-App-Chat und Kommentare auf Trainings
   sind ausgeschlossen.
 - **NG-003**: Trainingsplanung/Kalender ist ausgeschlossen.
@@ -387,11 +437,11 @@ Foto-URLs schlägt fehl.
 ### Key Entities
 
 - **Player**: Ein Kadermitglied. Attribute: `name` (Pflicht), `active`,
-  `jersey_number` (optional), `position` (optional), `linked_user_id`
-  (optional, verweist auf einen Player-Login, sofern der Spieler einen
-  Account hat).
-- **PointCategory**: Ein Bewertungskriterium. Attribute: `name`, `active`,
-  `sort_order`, `value_min`, `value_max`.
+  `jersey_number` (optional, eindeutig unter aktiven Spielern),
+  `position` (optional), `linked_user_id` (optional, 1:1),
+  `photo_consent` (bool, Default `false`).
+- **PointCategory**: Ein Bewertungskriterium. Attribute: `name`,
+  `active`, `sort_order`, `value_min`, `value_max`.
 - **Training**: Eine Trainingseinheit. Attribute: `date` (Pflicht),
   `title` (optional), `note` (optional), `created_by` (Trainer),
   `created_at`, `last_updated_at`, `last_updated_by`.
@@ -404,6 +454,8 @@ Foto-URLs schlägt fehl.
   `uploaded_at`. Mindestens 1 pro Training.
 - **UserAccount**: Ein Auth-Konto mit Rolle `trainer` oder `player`; für
   Spieler-Konten kann eine Verknüpfung zu genau einem Player bestehen.
+  In v1 sehen und bearbeiten alle Trainer alle Daten (kein Team-Scoping,
+  siehe A15).
 - **AuditFields** (nicht eigene Entity, aber Konvention): `created_at`,
   `created_by`, `last_updated_at`, `last_updated_by` auf jeder mutierbaren
   Entity.
@@ -476,3 +528,21 @@ Foto-URLs schlägt fehl.
   URL erreichbar (keine Signatur, keine Zeitbegrenzung); die Anonymität
   wird über das übertragene Datenschema (nur Trikotnummer, keine Namen)
   hergestellt, nicht über Zugriffsgeheimhaltung.
+- **A12**: `photo_consent` wird pro Spieler als Flag gepflegt. Die
+  Consent-Enforcement in v1 arbeitet auf Foto-Ebene ("Foto komplett
+  ausblenden, wenn Consent unklar"), NICHT auf Gesichts-/Ausschnitts-
+  Ebene. Automatische Gesichtserkennung ist YAGNI und ausgeschlossen für
+  v1. Die dokumentierte schriftliche Einwilligung wird außerhalb der App
+  (Elternabend, Vereinsantrag) erfasst; der Trainer überträgt sie als
+  Flag in die App.
+- **A13**: `jersey_number` ist eindeutig unter aktiven Spielern.
+  Deaktivierte Spieler blockieren keine Nummer.
+- **A14**: In v1 sehen und bearbeiten alle Trainer alle Daten (keine
+  Trainer-Team-Zuordnung, weil in v1 nur eine Mannschaft geführt wird).
+- **A15**: Multi-Team ist bekannter zukünftiger Bedarf (Verein hat 4
+  Mannschaften: 3× C + 1× B-Jugend). v1 bildet genau EIN Team ab; das
+  Schema wird so gewählt, dass eine spätere `team_id`-Migration auf
+  allen team-fähigen Tabellen (players, trainings, point_categories)
+  ohne Datenverlust möglich ist (z. B. via Backfill mit
+  `team_id = <default-team>` beim Migrationsschritt). Kein Code für
+  Multi-Team-UI in v1, kein Team-Selector, kein Team-Slug in URLs.

@@ -2,6 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-09-10
+**Last Updated**: 2026-09-10 (nach `/speckit-clarify`)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -19,8 +20,8 @@
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
-- [x] Scope is clearly bounded (Non-Goals NG-001..006 listed; NG-004 reworded to allow anonymous public ranking)
-- [x] Dependencies and assumptions identified (A1..A11)
+- [x] Scope is clearly bounded (Non-Goals NG-001..006 present; v1 = 1 team, Multi-Team ist v2)
+- [x] Dependencies and assumptions identified (A1..A15)
 
 ## Feature Readiness
 
@@ -31,9 +32,10 @@
 
 ## Notes
 
-- Both open clarifications from the first draft were resolved:
-  - FR-051: Lexicographic sort by category `sort_order`, `SUM(value)` per category, ties resolved by next category (assumption A9 records the sum-vs-average default).
-  - FR-054: Full in-team transparency (assumption A10).
-- A new scope addition emerged from the FR-054 answer: anonymous public
-  ranking without login, jersey-number identification only (FR-060..064,
-  US5, SC-008, A11). NG-004 reworded accordingly.
+- Clarify-Session 2026-09-10: 4 gestellte Fragen, 4 beantwortet.
+  Q5 (Trainer-Team-Berechtigung) wurde übersprungen, weil sich mit der
+  finalen Antwort zu Multi-Team (v1 = 1 Team) die Frage erübrigt hat.
+- Wichtige v1-Entscheidungen: Foto-Consent per Flag; Player 1:1
+  User-Account (optional); jersey_number eindeutig unter aktiven
+  Spielern; v1 = eine Mannschaft mit Schema, das v2-Multi-Team-Migration
+  erlaubt.
