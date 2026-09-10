@@ -56,45 +56,45 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Database schema
 
-- [ ] T015 Migration `supabase/migrations/20260910120000_init_teams.sql` — create tables `teams`, `memberships` (composite PK, `role` check), `invitations` (unique `token`, partial unique on `(team_id, email) where accepted_at is null`) per [data-model.md](./data-model.md)
-- [ ] T016 Migration `supabase/migrations/20260910120500_helpers.sql` — `public.is_member(uuid)`, `public.is_trainer(uuid)`, `public.user_profiles` view
-- [ ] T017 Migration `supabase/migrations/20260910121000_team_scoped_tables.sql` — create `players`, `point_categories`, `trainings`, `training_photos`, `point_entries`, `team_settings` with `team_id` FKs, partial unique indexes (`players_active_jersey_per_team_uniq`, `players_linked_user_per_team_uniq`), other indexes per [data-model.md](./data-model.md)
-- [ ] T018 Migration `supabase/migrations/20260910121500_triggers.sql` — audit `set_last_updated_at()` on all mutable tables; `prevent_last_trainer_change()` on `memberships`; `enforce_point_entry_range()`; `enforce_point_entry_team_consistency()`; `enforce_training_has_photo()`; `enforce_photo_path_team()`; `enforce_player_linked_user_membership()`; `bootstrap_team_settings()` on `after insert on teams`
-- [ ] T019 Migration `supabase/migrations/20260910122000_rls_enable.sql` — `alter table … enable row level security` for every base table
+- [X] T015 Migration `supabase/migrations/20260910120000_init_teams.sql` — create tables `teams`, `memberships` (composite PK, `role` check), `invitations` (unique `token`, partial unique on `(team_id, email) where accepted_at is null`) per [data-model.md](./data-model.md)
+- [X] T016 Migration `supabase/migrations/20260910120500_helpers.sql` — `public.is_member(uuid)`, `public.is_trainer(uuid)`, `public.user_profiles` view
+- [X] T017 Migration `supabase/migrations/20260910121000_team_scoped_tables.sql` — create `players`, `point_categories`, `trainings`, `training_photos`, `point_entries`, `team_settings` with `team_id` FKs, partial unique indexes (`players_active_jersey_per_team_uniq`, `players_linked_user_per_team_uniq`), other indexes per [data-model.md](./data-model.md)
+- [X] T018 Migration `supabase/migrations/20260910121500_triggers.sql` — audit `set_last_updated_at()` on all mutable tables; `prevent_last_trainer_change()` on `memberships`; `enforce_point_entry_range()`; `enforce_point_entry_team_consistency()`; `enforce_training_has_photo()`; `enforce_photo_path_team()`; `enforce_player_linked_user_membership()`; `bootstrap_team_settings()` on `after insert on teams`
+- [X] T019 Migration `supabase/migrations/20260910122000_rls_enable.sql` — `alter table … enable row level security` for every base table
 
 ### RLS policies
 
-- [ ] T020 [P] Migration `supabase/migrations/20260910122100_rls_teams.sql` with policies `teams_read_membership`, `teams_update_trainer` per [contracts/rls-policies.md](./contracts/rls-policies.md)
-- [ ] T021 [P] Migration `supabase/migrations/20260910122200_rls_memberships.sql` with `memberships_read_self_or_teamtrainer`, `memberships_write_trainer`
-- [ ] T022 [P] Migration `supabase/migrations/20260910122300_rls_invitations.sql` with `invitations_read_team_trainer`, `invitations_read_own_email`, `invitations_write_trainer`, `invitations_accept_own_email`
-- [ ] T023 [P] Migration `supabase/migrations/20260910122400_rls_players.sql` with `players_read_member`, `players_write_trainer`
-- [ ] T024 [P] Migration `supabase/migrations/20260910122500_rls_categories.sql` with `pc_read_member`, `pc_write_trainer`
-- [ ] T025 [P] Migration `supabase/migrations/20260910122600_rls_trainings.sql` with `tr_read_member_saved`, `tr_write_trainer`
-- [ ] T026 [P] Migration `supabase/migrations/20260910122700_rls_training_photos.sql` with join-through-trainings policies
-- [ ] T027 [P] Migration `supabase/migrations/20260910122800_rls_point_entries.sql` with `pe_read_member`, `pe_write_trainer` (join-through-trainings)
-- [ ] T028 [P] Migration `supabase/migrations/20260910122900_rls_team_settings.sql` with `ts_read_member`, `ts_write_trainer`
+- [X] T020 [P] Migration `supabase/migrations/20260910122100_rls_teams.sql` with policies `teams_read_membership`, `teams_update_trainer` per [contracts/rls-policies.md](./contracts/rls-policies.md)
+- [X] T021 [P] Migration `supabase/migrations/20260910122200_rls_memberships.sql` with `memberships_read_self_or_teamtrainer`, `memberships_write_trainer`
+- [X] T022 [P] Migration `supabase/migrations/20260910122300_rls_invitations.sql` with `invitations_read_team_trainer`, `invitations_read_own_email`, `invitations_write_trainer`, `invitations_accept_own_email`
+- [X] T023 [P] Migration `supabase/migrations/20260910122400_rls_players.sql` with `players_read_member`, `players_write_trainer`
+- [X] T024 [P] Migration `supabase/migrations/20260910122500_rls_categories.sql` with `pc_read_member`, `pc_write_trainer`
+- [X] T025 [P] Migration `supabase/migrations/20260910122600_rls_trainings.sql` with `tr_read_member_saved`, `tr_write_trainer`
+- [X] T026 [P] Migration `supabase/migrations/20260910122700_rls_training_photos.sql` with join-through-trainings policies
+- [X] T027 [P] Migration `supabase/migrations/20260910122800_rls_point_entries.sql` with `pe_read_member`, `pe_write_trainer` (join-through-trainings)
+- [X] T028 [P] Migration `supabase/migrations/20260910122900_rls_team_settings.sql` with `ts_read_member`, `ts_write_trainer`
 
 ### Storage bucket
 
-- [ ] T029 Migration `supabase/migrations/20260910123000_storage_photos.sql` — insert bucket `training-photos` (private); policies `tphoto_read_member`, `tphoto_write_trainer` reading `team_id` from `(storage.foldername(name))[1]`
+- [X] T029 Migration `supabase/migrations/20260910123000_storage_photos.sql` — insert bucket `training-photos` (private); policies `tphoto_read_member`, `tphoto_write_trainer` reading `team_id` from `(storage.foldername(name))[1]`
 
 ### Ranking + public functions
 
-- [ ] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); grants appropriate
+- [X] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); grants appropriate
 - [ ] T031 Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
 ### Auth / layouts / middlewares scaffolding
 
-- [ ] T032 Configure Supabase Auth for local dev in `supabase/config.toml`: disable email/password login, enable OTP magic-link, set email templates for invite + magic-link
-- [ ] T033 [P] Middleware `app/middleware/auth.global.ts` — allow `/login`, `/callback`, `/public/**`, `/invite/**`; else require session; else redirect `/login?redirect=<path>`
-- [ ] T034 [P] Middleware `app/middleware/team-context.ts` — for routes matching `/t/[slug]/**`: verify caller has membership in the team resolved from `slug`; else redirect `/start`
-- [ ] T035 [P] Middleware `app/middleware/trainer-only.ts` — for trainer-only sub-routes: assert `role === 'trainer'` in the current team context; else redirect `/t/<slug>/dashboard`
-- [ ] T036 [P] Layout `app/layouts/default.vue` — top nav with `TeamSwitcher`, user menu, sign-out; only for team-context routes
-- [ ] T037 [P] Layout `app/layouts/onboarding.vue` — bare shell for `/start`
-- [ ] T038 [P] Layout `app/layouts/public.vue` — bare shell for `/public/**`
-- [ ] T039 [P] Composable `app/composables/useAuth.ts` — `signInWithMagicLink(email, redirect?)`, `signOut()`, `useSession()`, reactive `email`
-- [ ] T040 [P] Composable `app/composables/useTeamContext.ts` — reactive `currentSlug` from route, `memberships[]` from DB, `currentTeam`, `isTrainer`
-- [ ] T041 [P] Page `app/pages/index.vue` — role-aware landing: session + memberships → `/t/<lastSlug>`; session + no memberships → `/start`; else `/login`
+- [X] T032 Configure Supabase Auth for local dev in `supabase/config.toml`: disable email/password login, enable OTP magic-link, set email templates for invite + magic-link
+- [X] T033 [P] Middleware `app/middleware/auth.global.ts` — allow `/login`, `/callback`, `/public/**`, `/invite/**`; else require session; else redirect `/login?redirect=<path>`
+- [X] T034 [P] Middleware `app/middleware/team-context.ts` — for routes matching `/t/[slug]/**`: verify caller has membership in the team resolved from `slug`; else redirect `/start`
+- [X] T035 [P] Middleware `app/middleware/trainer-only.ts` — for trainer-only sub-routes: assert `role === 'trainer'` in the current team context; else redirect `/t/<slug>/dashboard`
+- [X] T036 [P] Layout `app/layouts/default.vue` — top nav with `TeamSwitcher`, user menu, sign-out; only for team-context routes
+- [X] T037 [P] Layout `app/layouts/onboarding.vue` — bare shell for `/start`
+- [X] T038 [P] Layout `app/layouts/public.vue` — bare shell for `/public/**`
+- [X] T039 [P] Composable `app/composables/useAuth.ts` — `signInWithMagicLink(email, redirect?)`, `signOut()`, `useSession()`, reactive `email`
+- [X] T040 [P] Composable `app/composables/useTeamContext.ts` — reactive `currentSlug` from route, `memberships[]` from DB, `currentTeam`, `isTrainer`
+- [X] T041 [P] Page `app/pages/index.vue` — role-aware landing: session + memberships → `/t/<lastSlug>`; session + no memberships → `/start`; else `/login`
 
 **Checkpoint**: Migrations apply cleanly, RLS is on every table, Storage is set up, empty shell renders in each layout, middlewares redirect correctly.
 
