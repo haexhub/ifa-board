@@ -1,17 +1,16 @@
-# Quickstart: ifa-board dev environment
+# Quickstart: ifa-board dev environment (Round 2, Multi-Tenant)
 
 **Feature**: 001-points-and-photos
-**Date**: 2026-09-10
+**Date**: 2026-09-10 (regenerated after Round-2 clarify)
 
-Bootstrap the app locally end-to-end: Nuxt frontend + Supabase backend
-(local Docker) + seed data. Assumes you have a fresh clone of the
-repository and no prior state.
+Bootstrap the app locally: Nuxt frontend + Supabase (Docker) + Inbucket
+email capture for magic-links.
 
 ## Prerequisites
 
 - **Node.js 22 LTS** (`nvm install 22 && nvm use 22`)
 - **pnpm 9+** (`corepack enable && corepack prepare pnpm@latest --activate`)
-- **Docker** (for local Supabase)
+- **Docker** (Supabase Postgres + Studio + Inbucket)
 - **Supabase CLI** (`brew install supabase/tap/supabase` or download binary)
 
 ## One-time setup
@@ -20,84 +19,88 @@ repository and no prior state.
 # 1. Install app dependencies
 pnpm install
 
-# 2. Start local Supabase (Postgres + Auth + Studio on 54321, 54322, 54323)
+# 2. Start local Supabase (Postgres + Auth + Studio + Inbucket at :54324)
 supabase start
 
-# 3. Apply migrations + seed data
-supabase db reset            # drops local DB and re-applies migrations + seed
+# 3. Apply migrations + seed
+supabase db reset
 
 # 4. Generate typed database bindings
-pnpm gen:types               # writes app/types/database.ts
+pnpm gen:types             # writes app/types/database.ts
 
 # 5. Set environment variables
 cp .env.example .env
-# The values printed by `supabase start` fill NUXT_PUBLIC_SUPABASE_URL
-# and NUXT_PUBLIC_SUPABASE_ANON_KEY; the service_role key goes into
-# NUXT_SUPABASE_SERVICE_ROLE_KEY (server-only).
+# Values printed by `supabase start` fill:
+#   NUXT_PUBLIC_SUPABASE_URL
+#   NUXT_PUBLIC_SUPABASE_ANON_KEY
+#   NUXT_SUPABASE_SERVICE_ROLE_KEY   (server-only)
 
-# 6. Run the dev server
-pnpm dev                     # http://localhost:3000
+# 6. Run dev server
+pnpm dev                   # http://localhost:3000
 ```
 
-## Creating the initial trainer account
+## Creating the first user (locally)
 
-The seed does **not** insert an auth user. Create the first trainer
-manually via the local Supabase Studio:
+There is **no** studio-created bootstrap trainer anymore. Signup happens
+in-app via magic-link:
 
-1. Open `http://localhost:54323` (Supabase Studio).
-2. Authentication → Users → "Add user" → enter email + password.
-3. In SQL Editor:
-   ```sql
-   insert into public.user_profiles (id, role, display_name)
-   values ('<paste-user-id>', 'trainer', 'Initial Trainer');
-   ```
-4. Log in at `http://localhost:3000/login` with those credentials.
+1. Open `http://localhost:3000/login`.
+2. Enter any address (e.g. `me@example.com`).
+3. Open **Inbucket** at `http://localhost:54324` — the magic-link
+   arrives instantly. Click it.
+4. You land on `/callback` → `/start`.
+5. Enter your display name, then **Team gründen** with any name (e.g.
+   "Test-Team"). You're now the trainer of that team.
+6. Continue to `/t/test-team/…` and start building trainings, players,
+   categories.
 
-For local subsequent trainers / players, use the in-app "Einladen"
-buttons on the Players and (planned) Team-Admin pages once logged in as
-trainer.
+For a second user (to simulate invitations):
+
+1. In an Incognito window, repeat 1–4 with `player@example.com`.
+2. Back in the first window, go to `/t/test-team/team/members`, click
+   **Einladen**, enter `player@example.com`, choose role `player`,
+   send.
+3. In the Incognito window, refresh Inbucket, open the newest email,
+   click. You land on `/callback` → `/invite/<token>` → **Annehmen** →
+   `/t/test-team/dashboard`.
 
 ## Running the test suites
 
 ```bash
-pnpm test:unit               # Vitest — pure logic + component tests
-pnpm test:e2e                # Playwright against local Supabase
+pnpm test:unit
+pnpm test:e2e
 ```
 
-Playwright config boots the dev server, resets the DB, seeds a known
-trainer + player pair, and runs the scenarios (US1..US6 + RLS negative
-matrix in `contracts/rls-policies.md`).
+Playwright config boots the dev server, resets the DB, and seeds two
+teams (A and B) with a trainer and player each — for the cross-team
+RLS negative suite (SC-009).
 
-## Deploying to production (later, after MVP)
+## Deploying to production (Vercel + Supabase Cloud)
 
-Target: Vercel (Nuxt) + Supabase Cloud (Postgres/Auth/Storage).
+Outline (not part of the MVP task list):
 
-Outline (not part of the MVP task list — captured here so it's not lost):
-
-1. Create a Supabase Cloud project; note its URL + anon key + service
-   role key.
-2. `supabase link --project-ref <ref>` locally.
-3. `supabase db push` to apply migrations to Cloud.
-4. Generate the initial admin trainer via Cloud SQL Editor (same steps
-   as local, but against Cloud).
-5. Create a Vercel project pointing at this repo; set the same
-   environment variables (`NUXT_PUBLIC_SUPABASE_URL`,
-   `NUXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `NUXT_SUPABASE_SERVICE_ROLE_KEY`).
-6. First deploy: main branch → production; PRs → preview URLs. Preview
-   URLs use the same Supabase Cloud project (all envs share the DB in
-   v1 — acceptable for a small team; separate `staging` project can be
-   added later if needed).
+1. `supabase link --project-ref <ref>`; `supabase db push` to apply
+   migrations to Cloud.
+2. On Vercel, create a project pointing at this repo; set
+   `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `NUXT_SUPABASE_SERVICE_ROLE_KEY` env vars.
+3. First deploy: `main` → production, PRs → preview URLs (share the
+   Cloud DB in v1).
+4. Configure Supabase Auth → Email → disable password login, enable
+   magic-link, set the `redirectTo` URL allowlist to include the
+   production and preview origins.
+5. Set the SMTP for magic-link email in Supabase (or use the built-in
+   free tier).
 
 ## Common commands
 
 ```bash
-supabase migration new <slug>   # start a new SQL migration
-supabase db reset               # reapply migrations + seed locally
-pnpm gen:types                  # regenerate app/types/database.ts
-pnpm lint                       # eslint + prettier
-pnpm typecheck                  # tsc --noEmit
+supabase migration new <slug>
+supabase db reset
+pnpm gen:types
+pnpm lint
+pnpm typecheck
 ```
 
-Migrations MUST be committed together with the regenerated
-`app/types/database.ts` (Constitution Principle V).
+Every schema-affecting migration MUST be committed together with the
+regenerated `app/types/database.ts` (Constitution Principle V).

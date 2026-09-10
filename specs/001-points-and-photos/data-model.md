@@ -1,67 +1,133 @@
-# Data Model: Trainingspunkte & Trainingsfotos
+# Data Model: Trainingspunkte & Trainingsfotos (Round 2, Multi-Tenant)
 
 **Feature**: 001-points-and-photos
-**Date**: 2026-09-10
+**Date**: 2026-09-10 (regenerated after Round-2 clarify)
 
 All tables live in the `public` schema unless noted. Every table has RLS
 enabled; policies are summarized in
-[contracts/rls-policies.md](./contracts/rls-policies.md).
+[contracts/rls-policies.md](./contracts/rls-policies.md). Every mutable
+row carries the audit fields `created_at`, `created_by`, `last_updated_at`,
+`last_updated_by` unless explicitly noted.
 
-Column types are Postgres. Timestamps default to `now()`. Every mutable
-row carries `created_at`, `created_by`, `last_updated_at`,
-`last_updated_by` (Audit convention from spec).
+Two helper functions gate every team-scoped policy:
+
+```sql
+create or replace function public.is_member(p_team uuid) returns boolean
+  language sql stable
+as $$ select exists (select 1 from public.memberships
+  where team_id = p_team and user_id = auth.uid()) $$;
+
+create or replace function public.is_trainer(p_team uuid) returns boolean
+  language sql stable
+as $$ select exists (select 1 from public.memberships
+  where team_id = p_team and user_id = auth.uid() and role = 'trainer') $$;
+```
 
 ---
 
-## user_profiles
-
-Mirror of `auth.users` with the app-level role. Populated on invite
-acceptance (see research R2). Enables RLS policies to join on role
-without parsing JWT metadata.
+## teams
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
-| `id` | `uuid` | `primary key references auth.users(id) on delete cascade` | Same PK as auth user |
-| `role` | `text` | `not null check (role in ('trainer','player'))` | |
-| `display_name` | `text` | `not null` | Copied from invite for header UI |
+| `id` | `uuid` | `primary key default gen_random_uuid()` | |
+| `name` | `text` | `not null` | |
+| `slug` | `text` | `not null unique` | URL identifier; lowercased ASCII/dash |
+| `created_by` | `uuid` | `not null references auth.users(id)` | |
 | `created_at` | `timestamptz` | `not null default now()` | |
 | `last_updated_at` | `timestamptz` | `not null default now()` | trigger-updated |
+| `last_updated_by` | `uuid` | `references auth.users(id)` | |
 
-Indexes: `create index user_profiles_role_idx on user_profiles(role);`
+Index: `create unique index teams_slug_uniq on teams(slug);` (implicit
+from `unique`).
+
+## memberships
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `user_id` | `uuid` | `references auth.users(id) on delete cascade` | |
+| `team_id` | `uuid` | `references teams(id) on delete cascade` | |
+| `role` | `text` | `not null check (role in ('trainer','player'))` | |
+| `created_at` | `timestamptz` | `not null default now()` | |
+| — | — | `primary key (user_id, team_id)` | Composite PK |
+
+Guard trigger `prevent_last_trainer_change` (`before update or delete
+on memberships`): raises if the operation would leave the referenced
+team with zero `trainer`-role memberships.
+
+Indexes:
+
+- `create index memberships_team_idx on memberships(team_id);`
+- `create index memberships_user_idx on memberships(user_id);`
+
+## invitations
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `uuid` | `primary key default gen_random_uuid()` | |
+| `team_id` | `uuid` | `not null references teams(id) on delete cascade` | |
+| `email` | `text` | `not null` | Lower-cased on insert via trigger |
+| `role` | `text` | `not null check (role in ('trainer','player'))` | |
+| `token` | `text` | `not null unique` | Random 32-char URL-safe |
+| `invited_by` | `uuid` | `not null references auth.users(id)` | |
+| `created_at` | `timestamptz` | `not null default now()` | |
+| `expires_at` | `timestamptz` | `not null default (now() + interval '14 days')` | A17 |
+| `accepted_at` | `timestamptz` | | Nullable until accepted |
+
+Constraint: `unique (team_id, email) where accepted_at is null` — at
+most one outstanding invite per (team, email). Insert path revokes any
+prior outstanding invite for the same pair.
+
+Index: `create index invitations_email_open_idx on invitations(email) where accepted_at is null;`
+
+## user_profiles (view)
+
+Public projection of `auth.users` for RLS-friendly display-name reads.
+
+```sql
+create view public.user_profiles as
+  select id,
+         (raw_user_meta_data->>'display_name') as display_name
+  from auth.users;
+```
+
+Not a base table; no RLS on views — access is gated by whichever
+policies the caller's queries would hit via joins.
 
 ## players
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | `uuid` | `primary key default gen_random_uuid()` | |
+| `team_id` | `uuid` | `not null references teams(id) on delete cascade` | |
 | `name` | `text` | `not null` | |
 | `active` | `boolean` | `not null default true` | |
-| `jersey_number` | `int` | | Nullable; uniqueness enforced by partial index below |
-| `position` | `text` | | Free-form; e.g. "TW", "IV", "ST" |
-| `linked_user_id` | `uuid` | `unique references auth.users(id) on delete set null` | 1:1 optional |
+| `jersey_number` | `int` | | Uniqueness enforced per team via partial unique index below |
+| `position` | `text` | | Free-form |
+| `linked_user_id` | `uuid` | `references auth.users(id) on delete set null` | See constraint below |
 | `photo_consent` | `boolean` | `not null default false` | |
 | `created_at` | `timestamptz` | `not null default now()` | |
 | `created_by` | `uuid` | `references auth.users(id)` | |
 | `last_updated_at` | `timestamptz` | `not null default now()` | trigger-updated |
 | `last_updated_by` | `uuid` | `references auth.users(id)` | |
 
-Indexes / constraints:
+Constraints / indexes:
 
-- `create unique index players_active_jersey_uniq on players(jersey_number) where active = true and jersey_number is not null;`
-  Enforces FR-030/A13: jersey unique among active players.
-- `create index players_active_idx on players(active);`
-
-State transitions: `active = true` ⇄ `active = false` (soft-delete). Hard
-delete blocked by referential integrity from `point_entries`.
+- `create unique index players_active_jersey_per_team_uniq on players(team_id, jersey_number) where active = true and jersey_number is not null;`
+- `create unique index players_linked_user_per_team_uniq on players(team_id, linked_user_id) where linked_user_id is not null;` — 1:1 within a team.
+- `create index players_team_idx on players(team_id);`
+- Trigger `enforce_player_linked_user_membership` (`before insert or
+  update` of `linked_user_id`): asserts the linked user has a
+  `player`-role membership in the same `team_id`.
 
 ## point_categories
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | `uuid` | `primary key default gen_random_uuid()` | |
+| `team_id` | `uuid` | `not null references teams(id) on delete cascade` | |
 | `name` | `text` | `not null` | |
 | `active` | `boolean` | `not null default true` | |
-| `sort_order` | `int` | `not null` | Lower = higher priority in ranking (FR-051) |
+| `sort_order` | `int` | `not null` | Lexicographic priority in ranking (FR-051) |
 | `value_min` | `int` | `not null` | |
 | `value_max` | `int` | `not null check (value_max >= value_min)` | |
 | `created_at` | `timestamptz` | `not null default now()` | |
@@ -69,46 +135,30 @@ delete blocked by referential integrity from `point_entries`.
 | `last_updated_at` | `timestamptz` | `not null default now()` | trigger-updated |
 | `last_updated_by` | `uuid` | `references auth.users(id)` | |
 
-Indexes: `create index point_categories_active_sort_idx on point_categories(active, sort_order);`
+Indexes:
 
-Deletion of a category with any referencing `point_entries` is prevented
-by the FK (`on delete restrict`); UI offers deactivation only, as per
-FR-024.
+- `create index point_categories_team_active_sort_idx on point_categories(team_id, active, sort_order);`
 
 ## trainings
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | `uuid` | `primary key default gen_random_uuid()` | |
+| `team_id` | `uuid` | `not null references teams(id) on delete cascade` | |
 | `date` | `date` | `not null check (date <= current_date)` | FR-011 no future date |
 | `title` | `text` | | |
 | `note` | `text` | | |
+| `status` | `text` | `not null default 'draft' check (status in ('draft','saved'))` | |
 | `created_at` | `timestamptz` | `not null default now()` | |
 | `created_by` | `uuid` | `references auth.users(id)` | |
 | `last_updated_at` | `timestamptz` | `not null default now()` | trigger-updated |
 | `last_updated_by` | `uuid` | `references auth.users(id)` | |
 
-Indexes: `create index trainings_date_idx on trainings(date desc);`
+Indexes: `create index trainings_team_date_idx on trainings(team_id, date desc);`
 
-**Photo-Pflicht** (FR-013): enforced at save time by a **deferred check**
-in a Postgres trigger `enforce_training_has_photo` that runs
-`after insert or update` on `trainings`. Because photo upload happens
-in a separate request (Storage), the app pattern is:
-
-1. Trainer opens the training-editor page → a `trainings` row is created
-   in `draft` state (see next column).
-2. Photos uploaded → rows in `training_photos`.
-3. On "Speichern" the UI moves the row to `saved` state; the trigger
-   asserts `exists (select 1 from training_photos where training_id = new.id)`
-   before allowing `status = 'saved'`.
-
-Adding a `status` column:
-
-| Column | Type | Constraints |
-|---|---|---|
-| `status` | `text` | `not null default 'draft' check (status in ('draft','saved'))` |
-
-`draft` trainings are invisible to `player` role (see RLS).
+Trigger `enforce_training_has_photo` (`before update`): if
+`new.status = 'saved'` and `old.status != 'saved'`, assert
+`exists (select 1 from training_photos where training_id = new.id)`.
 
 ## training_photos
 
@@ -116,11 +166,14 @@ Adding a `status` column:
 |---|---|---|---|
 | `id` | `uuid` | `primary key default gen_random_uuid()` | |
 | `training_id` | `uuid` | `not null references trainings(id) on delete cascade` | |
-| `storage_path` | `text` | `not null unique` | Object key in Storage bucket `training-photos` |
+| `storage_path` | `text` | `not null unique` | `<team_id>/<training_id>/<uuid>.<ext>` |
 | `content_type` | `text` | `not null check (content_type in ('image/jpeg','image/png','image/heic','image/heif','image/webp'))` | FR-043 |
 | `size_bytes` | `int` | `not null check (size_bytes > 0 and size_bytes <= 10485760)` | 10 MB, FR-042 |
 | `uploaded_by` | `uuid` | `not null references auth.users(id)` | |
 | `uploaded_at` | `timestamptz` | `not null default now()` | |
+
+Trigger `enforce_photo_path_team` (`before insert`): asserts the first
+segment of `storage_path` equals `training.team_id::text`.
 
 Indexes: `create index training_photos_training_idx on training_photos(training_id);`
 
@@ -132,7 +185,7 @@ Indexes: `create index training_photos_training_idx on training_photos(training_
 | `training_id` | `uuid` | `not null references trainings(id) on delete cascade` | |
 | `player_id` | `uuid` | `not null references players(id) on delete restrict` | |
 | `category_id` | `uuid` | `not null references point_categories(id) on delete restrict` | |
-| `value` | `int` | `not null` | Range checked by trigger against category |
+| `value` | `int` | `not null` | Range checked by trigger against category at write time |
 | `created_at` | `timestamptz` | `not null default now()` | |
 | `created_by` | `uuid` | `references auth.users(id)` | |
 | `last_updated_at` | `timestamptz` | `not null default now()` | trigger-updated |
@@ -140,48 +193,72 @@ Indexes: `create index training_photos_training_idx on training_photos(training_
 
 Constraints / indexes:
 
-- `unique (training_id, player_id, category_id)` — one entry per triple.
-- `create index point_entries_player_idx on point_entries(player_id);`
+- `unique (training_id, player_id, category_id)`
 - `create index point_entries_training_idx on point_entries(training_id);`
-- **Range trigger** `enforce_point_entry_range`
-  `before insert or update`: fetches the category and asserts
-  `new.value between category.value_min and category.value_max`.
-  Uses the category state at insert/update time (FR-022, edge case:
-  "Wertebereich einer Kategorie ändert sich" — historical rows stay
-  valid, only new writes are rechecked against the current range).
+- `create index point_entries_player_idx on point_entries(player_id);`
 
-## settings
+Triggers:
 
-Singleton row for team-wide settings; primary key is a fixed value so
-there is always exactly one.
+- `enforce_point_entry_range` (`before insert or update`): checks
+  `new.value between category.value_min and category.value_max` using
+  the category's current range (FR-022).
+- `enforce_point_entry_team_consistency` (`before insert or update`):
+  asserts `training.team_id = player.team_id = category.team_id`.
+
+## team_settings
+
+Per-team singleton (one row per team). Trainer-only writable.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
-| `id` | `int` | `primary key check (id = 1)` | Always 1 |
-| `season_start` | `date` | `not null default date_trunc('year', current_date)::date` | Assumption A4 |
+| `team_id` | `uuid` | `primary key references teams(id) on delete cascade` | |
+| `season_start` | `date` | `not null default date_trunc('year', current_date)::date` | A4 (per team now) |
 | `updated_at` | `timestamptz` | `not null default now()` | |
 | `updated_by` | `uuid` | `references auth.users(id)` | |
 
-## Derived views
+Row is inserted automatically by a `after insert on teams` trigger with
+defaults.
 
-Written in migrations under `supabase/migrations/…_views.sql`:
+## Derived functions (views)
 
-- **`public.player_scores_by_category`** — one row per
-  `(player_id, category_id, from_date, to_date)` with `sum_value`,
-  `avg_value`, `median_value`. Implemented as a **function**
-  `get_player_scores_by_category(from date, to date)` returning a set,
-  because dynamic timeframes cannot be a static view.
-- **`public.team_ranking`** — similarly a function
-  `get_team_ranking(from date, to date)`. Uses `dense_rank()` over an
-  `order by` list built dynamically from active categories'
-  `sort_order` (see [contracts/public-ranking.md](./contracts/public-ranking.md)).
-- **`public.get_public_ranking(from date, to date)`** — `SECURITY INVOKER`
-  wrapper that returns only `rank_position`, `jersey_number`, and
-  per-category `sum_value`. Granted to `anon`.
+Written in migrations under `supabase/migrations/…_functions.sql`:
 
-## Storage buckets
+- `public.get_team_ranking(p_team uuid, p_from date, p_to date) returns
+  jsonb` — lexicographic sort by category `sort_order`, `sum(value)
+  desc`; ties via `dense_rank()`. Uses `is_member(p_team)` as a guard;
+  returns null if not a member.
+- `public.get_player_scores_by_category(p_team uuid, p_player uuid,
+  p_from date, p_to date) returns setof …` — one row per
+  `(category_id, sum, avg, median)` for the player and timeframe.
+- `public.get_public_ranking(p_slug text, p_from date, p_to date)
+  returns jsonb` — `security invoker`, resolves slug internally, never
+  returns team `id` or player names. Grant `execute` to `anon,
+  authenticated`.
 
-- `training-photos` — private bucket. RLS policy on `storage.objects`
-  matches `bucket_id = 'training-photos'` and grants access only to
-  authenticated users. Signed URLs (short TTL, e.g. 10 min) are
-  generated on demand from the training detail page.
+## Storage bucket `training-photos`
+
+- **Private** bucket.
+- Object keys are `<team_id>/<training_id>/<uuid>.<ext>`.
+- Read policy: `bucket_id = 'training-photos' AND
+  public.is_member(((storage.foldername(name))[1])::uuid)`.
+- Insert/delete policy: same, but `is_trainer` instead of `is_member`.
+
+## Sequence of migrations (execution order for `/speckit-tasks`)
+
+1. `20260910120000_init_teams.sql` — `teams`, `memberships`,
+   `invitations`.
+2. `20260910120500_helpers.sql` — `is_member`, `is_trainer`,
+   `user_profiles` view.
+3. `20260910121000_team_scoped_tables.sql` — `players`,
+   `point_categories`, `trainings`, `training_photos`, `point_entries`,
+   `team_settings`.
+4. `20260910121500_triggers.sql` — audit, range, photo-required,
+   team-consistency, path, membership guard triggers.
+5. `20260910122000_rls_enable.sql` — `alter table … enable row level
+   security` for every base table.
+6. `20260910122500_rls_policies.sql` — every policy in one file for
+   easier review (or split by table, see contract file).
+7. `20260910123000_storage_photos.sql` — bucket + policies.
+8. `20260910123500_functions.sql` — `get_team_ranking`,
+   `get_player_scores_by_category`, `get_public_ranking` + grants.
+9. `20260910124000_seed_fixtures.sql` — seed only for local dev.

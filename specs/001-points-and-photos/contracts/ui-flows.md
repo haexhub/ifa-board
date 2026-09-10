@@ -1,145 +1,166 @@
-# Contract: UI Flows
+# Contract: UI Flows (Round 2, Multi-Tenant)
 
 **Feature**: 001-points-and-photos
-**Purpose**: Screen-level contracts for the MVP flows. Not visual design —
-what data each screen shows, what actions it exposes, what routes it
-lives on. Consumed by `/speckit-tasks` when it groups implementation
-tasks per user story.
-
-Every screen MUST render on a 360×640 mobile viewport without horizontal
-scroll (Constitution IV) and MUST use ≥44px min-height on interactive
-controls.
+**Purpose**: Screen-level contracts for each MVP user story in the
+multi-tenant scope. Data + actions per screen; visual design is
+implementation-time. Every screen renders on 360×640 mobile without
+horizontal scroll and uses ≥44px min-height on interactive controls
+(Constitution IV).
 
 ---
 
 ## Route map
 
-| Route | Layout | Auth | Role | Story |
-|---|---|---|---|---|
-| `/` | default | required | any | — (redirects) |
-| `/login` | default | optional | any | — |
-| `/dashboard` | default | required | player (or trainer) | US2 |
-| `/trainings` | default | required | any | US1 (list) |
-| `/trainings/new` | default | required | trainer | US1 |
-| `/trainings/:id` | default | required | any (edit trainer-only) | US1, US6 |
-| `/players` | default | required | trainer | US4 |
-| `/players/:id` | default | required | any | US2 detail |
-| `/categories` | default | required | trainer | US3 |
-| `/ranking` | default | required | any | US2 |
-| `/public/ranking` | public | none | anon | US5 |
+| Route | Layout | Auth | Team-Context | Role | Story |
+|---|---|---|---|---|---|
+| `/` | default | — | — | — | Landing/redirect |
+| `/login` | default | none | — | — | US0 |
+| `/callback` | default | (in progress) | — | — | US0 (Supabase callback) |
+| `/start` | onboarding | required | none | — | US0 |
+| `/invite/:token` | default | optional | — | — | US0 |
+| `/t/:slug` | default | required | member | any | Team landing (role-aware) |
+| `/t/:slug/dashboard` | default | required | member | player OR trainer | US2 |
+| `/t/:slug/trainings` | default | required | member | any | US1 (list) |
+| `/t/:slug/trainings/new` | default | required | member | trainer | US1 |
+| `/t/:slug/trainings/:id` | default | required | member | trainer edits; player views | US1, US6 |
+| `/t/:slug/players` | default | required | member | trainer | US4 |
+| `/t/:slug/players/:id` | default | required | member | any | US2 detail |
+| `/t/:slug/categories` | default | required | member | trainer | US3 |
+| `/t/:slug/ranking` | default | required | member | any | US2 |
+| `/t/:slug/team/members` | default | required | member | trainer | US0 (member mgmt) |
+| `/t/:slug/team/settings` | default | required | member | trainer | Season, name, slug edit |
+| `/public/:slug/ranking` | public | none | — | anon | US5 |
 
-Redirect rules (in `middleware/auth.global.ts`):
+Redirect rules (`middleware/auth.global.ts` + `team-context.ts`):
 
-- `/` while authenticated → `/dashboard` for players, `/trainings` for trainers.
-- `/` while unauthenticated → `/login`.
-- Any authenticated route while unauthenticated → `/login?redirect=<path>`.
-- `/public/**` → always allowed.
+- Unauthenticated → `/login` (with `?redirect=<current>` if present).
+- Authenticated, no memberships, not on `/start`/`/invite/**` → `/start`.
+- Authenticated with memberships, on `/` → `/t/<lastSlug>` (or first
+  membership's slug).
+- Authenticated but no membership in `<slug>` on `/t/<slug>/**` →
+  `/start`.
+- Non-trainer on trainer-only route → `/t/<slug>/dashboard`.
 
 ---
 
 ## Screen contracts
 
-### S1 — Login (`/login`)
+### S0a — Login (`/login`)
 
-**Shows**: Supabase email/password form; "Zur öffentlichen Rangliste" link.
+**Shows**: single email input, "Anmelde-Link senden" button, small
+link "Zur öffentlichen Rangliste" that requires knowing a slug (opens a
+slug input).
 
-**Actions**: sign in → redirect to `/`.
+**Actions**: submit → `useAuth.signInWithMagicLink(email, { redirectTo:
+window.location.origin + (route.query.redirect ?? '/callback') })`.
 
-### S2 — Trainer training editor (`/trainings/new`, `/trainings/:id` in trainer role)
+**Feedback**: after submit, replace form with "Prüfe deine E-Mails".
 
-**Shows**:
+### S0b — Callback (`/callback`)
 
-- Date (default today, edit disabled for future dates).
-- Optional title + note.
-- Grid: rows = active players (sorted by jersey_number then name),
-  columns = active categories (sorted by `sort_order`).
-- Number-input per cell with the category's `value_min..value_max`
-  range as `min`/`max` attributes and inline validation.
-- Photo uploader (multi-file); shows a red banner listing active players
-  without `photo_consent = true` (R6).
-- "Speichern" button — disabled until: at least one photo present.
-- If editing: `last_updated_by` + `last_updated_at` displayed at the top
-  ("Zuletzt geändert von X um HH:MM") so the last-write-wins policy is
-  transparent.
+**Shows**: neutral spinner "Anmeldung wird abgeschlossen…" while
+Supabase reads the URL fragment / query.
 
-**Actions**:
+**Actions**: after session, read `useAuth.memberships`; navigate to
+either `/start` (none) or `/t/<lastSlug>` (some).
 
-- Create `trainings` row in `draft` state on first render (if new).
-- Upsert `point_entries` on cell blur (auto-save each cell).
-- Upload photos to Storage; insert `training_photos` rows.
-- "Speichern" → transitions `trainings.status` to `saved` (trigger
-  asserts photo presence).
-
-### S3 — Player dashboard (`/dashboard`)
+### S0c — Onboarding start (`/start`, layout: `onboarding`)
 
 **Shows**:
 
-- Current rank position in the team over default timeframe.
-- Top-3 team members.
-- Timeframe picker.
-- CTA "Meine Punkte" → `/players/:me`.
+- If `display_name` not yet set: inline form "Wie sollen wir dich
+  nennen?" → writes `auth.users.user_metadata.display_name`.
+- Card A: "Team gründen" — button → dialog with `name` + optional
+  `slug`, on submit `POST /api/teams/create`, on success redirect
+  `/t/<slug>`.
+- Card B: "Einladungen für <email>" — lists `invitations` rows where
+  `email = auth.email` and `accepted_at is null and expires_at >
+  now()`; each shows team name, offered role, "Annehmen" button that
+  POSTs to `/api/invitations/accept`.
 
-**Actions**: pick timeframe (persisted in `localStorage`); navigate.
+### S0d — Invitation landing (`/invite/:token`)
 
-### S4 — Player detail (`/players/:id`)
+**Shows**:
 
-**Shows** (for any authenticated viewer):
+- If no session: input "E-Mail" (defaults to invitation email if
+  fetchable via a public projection), "Anmelde-Link senden".
+- If session but email ≠ invitation email: confirm card explaining
+  the mismatch, "Trotzdem annehmen" or "Abmelden und neu anmelden".
+- Else: card "<TeamName> lädt dich als <role> ein", "Annehmen" button
+  → `POST /api/invitations/accept`.
 
-- Basic info: name, jersey_number, position.
-- Per-category line chart of `value` vs. `training.date` in the
-  selected timeframe.
-- Team average and median as comparison lines on each chart.
+### S1 — Trainer training editor (`/t/:slug/trainings/new`, `.../trainings/:id` in trainer role)
 
-**Actions**: timeframe picker; back.
+Identical to Round 1 in shape, but all IDs are team-scoped:
 
-### S5 — Team ranking (`/ranking`)
+- Grid rows = players **where team_id = current team & active**.
+- Columns = active categories **where team_id = current team**.
+- Photo upload writes to `training-photos/<team_id>/<training_id>/<uuid>.ext`.
+- Consent banner lists no-consent players of the current team.
+- Auto-save per cell; "Speichern" transitions status to `saved`.
 
-**Shows**: sortable table of players over selected timeframe. Columns:
-rank, name, jersey number, per-category SUM, total. Sorted by the
-lexicographic rank from `get_team_ranking()`.
+### S2 — Player dashboard (`/t/:slug/dashboard`)
 
-**Actions**: timeframe picker.
+**Shows**: current rank in the current team, top-3 team members,
+timeframe picker, CTA to own `/t/:slug/players/<me>`.
 
-### S6 — Public anonymous ranking (`/public/ranking`)
+### S3 — Team ranking (`/t/:slug/ranking`)
 
-**Shows**: rank, jersey_number, per-category SUM. No names, no photos.
-"Ohne Anmeldung – nur Trikotnummern" banner. Timeframe picker (defaults
-to "Saison" from `settings.season_start`).
+**Shows**: full team ranking with names + jersey numbers +
+per-category totals.
 
-**Actions**: timeframe picker only.
+### S4 — Player detail (`/t/:slug/players/:id`)
 
-### S7 — Players CRUD (`/players`, trainer-only)
+**Shows**: name, jersey number, position, line chart per category with
+team average + median comparison lines.
 
-**Shows**: table of players with edit/deactivate actions; "Neuer Spieler"
-button; per-row `photo_consent` toggle; "Einladen per E-Mail" action
-(if `linked_user_id is null`).
+### S5 — Public anonymous ranking (`/public/:slug/ranking`, layout: `public`)
 
-### S8 — Categories CRUD (`/categories`, trainer-only)
+Identical to Round 1 but the slug is in the URL (per team).
 
-**Shows**: table of categories with edit/deactivate actions and
-`sort_order` drag-handles (or up/down buttons); "Neue Kategorie"
-button; deletion blocked when historical entries exist (UI hides
-the delete action).
+### S6 — Players CRUD (`/t/:slug/players`)
+
+Trainer-only. Table + edit + deactivate + consent toggle + "Einladen"
+per row. "Einladen" prefills invitation email and role (`player`).
+
+### S7 — Categories CRUD (`/t/:slug/categories`)
+
+Trainer-only. Same as Round 1 but scoped to the current team.
+
+### S8 — Team members (`/t/:slug/team/members`)
+
+Trainer-only. Two sections:
+
+- **Aktuelle Mitglieder**: table (display_name, email, role, "Rolle
+  ändern"-Dropdown, "Entfernen"-Button). Removing self or changing
+  the last trainer's role is blocked (trigger error surfaces as toast).
+- **Offene Einladungen**: list of invitations with `accepted_at is
+  null`; "Widerrufen" button deletes the row.
+- **Neue Einladung**: form (email + role) → `POST /api/invitations/issue`.
+
+### S9 — Team settings (`/t/:slug/team/settings`)
+
+Trainer-only. Fields: team name, slug (with warning about breaking
+URLs), season_start date. On save, update `teams` + `team_settings`.
 
 ---
 
+## Team switcher
+
+Present in every `default`-layout page. shadcn `Dropdown` bound to
+`useTeamContext.memberships`. Items show team name + role badge.
+Selecting an item navigates to `/t/<slug>/`.
+
 ## Empty and error states
 
-Each list screen renders a helpful empty state:
-
-- `/trainings` empty → "Noch kein Training erfasst" + trainer-only CTA
-  "Erstes Training anlegen".
-- `/players` (trainer) empty → CTA "Ersten Spieler anlegen".
-- `/categories` (trainer) empty → CTA "Erste Kategorie anlegen"; but
-  the seed installs one so this rarely fires.
-- `/ranking` with no entries in the timeframe → "Keine Punkte im
-  gewählten Zeitraum".
-
-Common error paths:
-
-- Network failure on save → toast "Speichern fehlgeschlagen — bitte
-  erneut versuchen" and keep the local state.
-- Photo upload rejected (size/type) → per-file error message next to
-  the failed file, other files continue.
-- RLS denial (unexpected — normally the UI hides the action) → toast
-  "Keine Berechtigung" and redirect to `/`.
+- `/start` with no invitations and no team → only "Team gründen" card.
+- `/t/<slug>/trainings` empty → "Noch kein Training erfasst" +
+  trainer-only CTA "Erstes Training anlegen".
+- `/t/<slug>/players` (trainer) empty → CTA "Ersten Spieler anlegen".
+- `/t/<slug>/categories` (trainer) empty → CTA "Erste Kategorie
+  anlegen".
+- `/t/<slug>/ranking` with no entries → "Keine Punkte im gewählten
+  Zeitraum".
+- Network failure on save → toast; local state kept.
+- RLS denial (unexpected) → toast "Keine Berechtigung"; redirect
+  `/start` if the user has no membership in that team.

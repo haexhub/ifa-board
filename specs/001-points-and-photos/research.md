@@ -1,237 +1,264 @@
-# Research: Trainingspunkte & Trainingsfotos
+# Research: Trainingspunkte & Trainingsfotos (Round 2, Multi-Tenant)
 
 **Feature**: 001-points-and-photos
-**Date**: 2026-09-10
-**Purpose**: Resolve open technology choices before design. Each entry is a
-locked decision unless later research overturns it explicitly.
+**Date**: 2026-09-10 (regenerated after Round-2 clarify)
+**Purpose**: Locked technology and pattern decisions for the multi-tenant
+scope. Each entry is authoritative unless overturned by a later, explicit
+research update.
 
 ---
 
-## R1: Nuxt rendering mode (SSR vs SPA)
+## R1: Nuxt rendering mode
 
 - **Decision**: Nuxt 3 in universal (SSR) mode.
-- **Rationale**:
-  - `@nuxtjs/supabase` handles cookie-based server session out of the box;
-    server routes see the authenticated user without duplicated logic.
-  - The anonymous public ranking benefits from SSR: single request → HTML
-    → cheap for search engines and link previews, no auth roundtrip.
-  - Mobile-first performance: server-rendered HTML paints faster on slow
-    connections than an SPA that must boot and then fetch.
+- **Rationale**: `@nuxtjs/supabase` handles cookie-based server session
+  cleanly (including magic-link callback), SSR gives the anonymous
+  public ranking cheap first paint, and mobile users get faster first
+  meaningful paint on slow connections.
+- **Alternatives considered**: SPA (`ssr: false`) — kept as fallback if
+  server auth complications outweigh benefits, one config flip; static
+  (`nuxt generate`) — rejected, data is dynamic.
+
+## R2: Auth flow — passwordless (magic-link) + onboarding
+
+- **Decision**: Supabase Auth via `@nuxtjs/supabase` with **OTP magic-link
+  only**. Password login is disabled in the Supabase project config.
+  - **Login page** (`/login`) has a single email input. Supabase sends an
+    OTP link that lands on `/callback`, which restores the session and
+    redirects.
+  - **Signup** shares the same magic-link route: unknown email addresses
+    are auto-created as `auth.users` rows on first link click. No
+    separate registration form.
+  - **Onboarding** (`/start`): once a session exists but the user has no
+    `memberships` rows, the app routes there. From `/start`, the user
+    either:
+    - **founds a team** (`POST /api/teams/create` — server route with
+      service role that generates a unique slug via
+      `slug()` + collision counter and atomically inserts the team row
+      and a Trainer-Membership for the caller), or
+    - **accepts an invitation** — the invitation-token was received via
+      the `/invite/:token` link (which itself sends a magic-link if the
+      user isn't yet signed in) and resolves to `insert into
+      memberships` + `update invitations set accepted_at = now()`.
+  - **Team-invite sending** (`POST /api/invitations/issue`): trainer-only,
+    verifies the caller has `is_trainer(team_id)`, inserts an
+    `invitations` row with a random token and 14-day expiry, and calls
+    `supabase.auth.admin.inviteUserByEmail(email, {redirectTo:
+    '/invite/'+token})`. That primes the Supabase magic-link mail and
+    steers the recipient at the invite-token flow after login.
+  - **Display name**: captured on the first onboarding step and written
+    to `auth.users.user_metadata.display_name`; mirrored to a
+    `user_profiles` view for RLS-friendly reads.
+- **Rationale**: Passwordless removes the "forgot password" support
+  burden and matches the constitution's mobile-first stance (typing an
+  email + tapping a link is friendlier than remembering a password).
+  Splitting signup from onboarding lets `auth.users` stay pure while the
+  team-related tables carry the app model.
 - **Alternatives considered**:
-  - **SPA (`ssr: false`)**: simpler for authenticated flows but hurts the
-    public view's first paint and eliminates one Constitution benefit
-    (SSR-served public ranking). Kept as fallback if server auth bugs
-    prove costly — the flip is a single config line.
-  - **Static (`nuxt generate`)**: rejected. Data changes constantly; every
-    ranking view would need a rebuild.
+  - **Email + password**: rejected — user explicit no-password
+    requirement.
+  - **Social logins (Google/Apple)**: deferred; the football club is
+    unlikely to need them for v1 and each adds an OAuth client.
+  - **Anonymous auth**: rejected — creates ghosts without a stable
+    identity for memberships.
 
-## R2: Auth flow (trainer + player accounts)
-
-- **Decision**: Supabase Auth via `@nuxtjs/supabase` module.
-  - **Initial trainer account**: created manually in the Supabase Studio
-    (email + password) — bootstrap step in [quickstart.md](./quickstart.md).
-  - **Additional trainer accounts**: created by an existing trainer through
-    a trainer-only UI page that calls `supabase.auth.admin.inviteUserByEmail`
-    from a **server** route (needs service_role key, kept server-only).
-  - **Player accounts**: same invite mechanism from the trainer UI. Sender
-    picks an existing `players` row and issues an email invite; the
-    resulting `auth.users` row is linked via `players.linked_user_id` on
-    invite acceptance.
-  - **Role storage**: `user_metadata.role = 'trainer' | 'player'`, set at
-    invite time by the server route and mirrored into a
-    `public.user_profiles` table so RLS policies can `join` without going
-    through `auth.jwt()`.
-- **Rationale**: Invites are the standard Supabase pattern; role in
-  `user_metadata` is JWT-embedded and cheap to read in RLS via
-  `(auth.jwt() ->> 'user_metadata')::jsonb ->> 'role'`, but a
-  `user_profiles` mirror lets us reference the role in foreign-key style
-  and index it — simpler policies.
-- **Alternatives considered**:
-  - **Magic-link only, no invite**: rejected — trainers need to trigger
-    onboarding rather than expecting players to self-signup.
-  - **Custom JWT claims via `supabase.functions.serve`**: rejected as
-    overkill; `user_metadata` handles this.
-
-## R3: Player-to-account linking
-
-- **Decision**: `players.linked_user_id uuid references auth.users(id) on
-  delete set null unique`. Unique constraint enforces the 1:1 relation.
-- **Rationale**: Matches spec (FR-005). `on delete set null` keeps history
-  intact if an auth user is deleted.
-- **Alternatives considered**:
-  - Foreign key from `auth.users` → `players`: rejected — `auth.users` is
-    Supabase-managed and shouldn't own an app FK.
-
-## R4: Anonymous public ranking mechanism
-
-- **Decision**: A single Postgres **view** named `public.public_ranking`
-  that projects only `jersey_number`, `rank_position`, per-category
-  aggregate scores, and the timeframe filter. `grant select on
-  public.public_ranking to anon;`. Base tables remain fully RLS-locked
-  and do NOT grant `anon`.
-  - Timeframe: the view takes bound parameters via a `SECURITY INVOKER`
-    wrapper function `public.get_public_ranking(from date, to date)`
-    (`stable`, no user context) so the anon client can call
-    `supabase.rpc('get_public_ranking', {from, to})`.
-- **Rationale**:
-  - Meets FR-062 (view schema is the ONLY thing anon can see).
-  - Constitution Principle II is preserved: RLS on base tables stays,
-    the view is the deliberate public surface.
-  - Simpler than exposing a materialized view or a full REST endpoint.
-- **Alternatives considered**:
-  - **`SECURITY DEFINER` function**: rejected because it bypasses RLS —
-    higher risk if the function is ever misused; view-based path is
-    explicit about what leaves the DB.
-  - **Nitro server route reading with service-role key**: rejected —
-    puts sensitive key in the server bundle and duplicates the RLS
-    surface.
-
-## R5: Ranking calculation location
-
-- **Decision**: Compute rank in SQL, expose two Postgres views:
-  - `public.player_scores_by_category` — one row per (player, category,
-    timeframe-bucket), SUM(value).
-  - `public.team_ranking` — window-function ranking that implements the
-    lexicographic-by-`category.sort_order` sort from FR-051; returns the
-    same shape whether called via authenticated or anon path (the anon
-    view above is a projection over this).
-- **Rationale**:
-  - Keeps the ranking rule in one place (SQL is the single source of
-    truth), avoids re-implementing it in the browser.
-  - Postgres window functions (`dense_rank() over (order by ...)`)
-    handle ties per the standard sport ranking (1, 2, 2, 4) — matches
-    spec edge case.
-  - Client stays presentation-only.
-- **Alternatives considered**:
-  - **Client-side rank** in a composable: rejected — duplicated logic
-    between authenticated and public paths.
-  - **Materialized view** with periodic refresh: rejected as premature
-    optimization for a team of ≤30 players.
-
-## R6: Photo consent enforcement
+## R3: Team model — `teams`, `memberships`, `invitations`
 
 - **Decision**:
-  - `players.photo_consent boolean not null default false`.
-  - Trainer UI shows a red warning list of no-consent active players
-    whenever the photo uploader is opened.
-  - Photos are served via a signed URL only from an authenticated page.
-  - **Consent enforcement is per-training-photo, not per-face**: on the
-    training detail page, if ANY currently active player in the team has
-    `photo_consent = false`, photos of that training display a blurred
-    thumbnail with a "Foto ausgeblendet – fehlende Einwilligung"
-    overlay for `player` role viewers. Trainers always see the raw
-    photo (they need to review what was uploaded). This matches spec A12.
-- **Rationale**: Face detection is YAGNI; the coarse rule matches the
-  spec's explicit assumption and is enforceable in the UI + a Postgres
-  `security invoker` function that decides visibility.
+  - `teams` table (`id uuid pk`, `name text`, `slug text unique`,
+    `created_by uuid references auth.users`, `created_at timestamptz`).
+  - `memberships` table (`user_id uuid references auth.users`,
+    `team_id uuid references teams`, `role text check in
+    ('trainer','player')`, `created_at`). Composite primary key
+    `(user_id, team_id)` — one membership per (user, team). A guard
+    trigger prevents deleting or downgrading the last trainer of a team.
+  - `invitations` table (`id uuid pk`, `team_id`, `email text`,
+    `role text`, `token text unique`, `invited_by`, `created_at`,
+    `expires_at`, `accepted_at`).
+  - Team-scoped tables (`players`, `point_categories`, `trainings`,
+    `training_photos` via join, `point_entries` via join) all carry a
+    non-null `team_id` with FK to `teams`.
+- **Rationale**: Matches spec FR-001..008, FR-070..074 and the
+  cross-team isolation requirement SC-009. Composite PK keeps the
+  membership set small and index-friendly.
 - **Alternatives considered**:
-  - **Face detection / redaction**: excluded per A12.
-  - **Auto-blocking upload if any no-consent player exists**: rejected —
-    trainer needs the flexibility to upload team-only training photos
-    where no minor is depicted.
+  - **`memberships` with a `roles text[]` array**: rejected — makes RLS
+    joins harder and doesn't fit two-role model.
+  - **Row-level tenancy via schema-per-team**: rejected — Postgres RLS
+    handles tenancy cleanly; per-schema explodes migrations and
+    complicates Supabase Storage.
 
-## R7: Chart library
+## R4: RLS helpers — `is_member`, `is_trainer`
 
-- **Decision**: **shadcn-vue Chart** components, which wrap **Unovis**.
-  Install `@unovis/vue` and `@unovis/ts`.
-- **Rationale**:
-  - Consistent design language with the rest of shadcn-vue.
-  - Supports the two charts we actually need: line (player timeline per
-    category) and bar (fallback for small-N samples).
-  - No React dependency.
+- **Decision**: Two helpers, both `stable` and used by every team-scoped
+  policy:
+  ```sql
+  create function public.is_member(p_team uuid) returns boolean
+    language sql stable
+  as $$ select exists (select 1 from public.memberships
+    where team_id = p_team and user_id = auth.uid()) $$;
+
+  create function public.is_trainer(p_team uuid) returns boolean
+    language sql stable
+  as $$ select exists (select 1 from public.memberships
+    where team_id = p_team and user_id = auth.uid() and role = 'trainer') $$;
+  ```
+- **Rationale**: One join, indexed (`memberships_pk` covers both
+  filters). Every team-scoped table's `using` and `with check` clauses
+  become 1-line calls.
+- **Alternatives considered**: parsing `auth.jwt()` metadata for team
+  membership — rejected because memberships change independently of the
+  JWT.
+
+## R5: Storage bucket + path convention
+
+- **Decision**: Single private bucket `training-photos`. Object path is
+  `<team_id>/<training_id>/<uuid>.<ext>`. Storage policies extract
+  `team_id` from the path (`(storage.foldername(name))[1]::uuid`) and
+  gate reads on `is_member(that_team_id)` and writes on
+  `is_trainer(that_team_id)`.
+- **Rationale**: Keeps a single bucket (cheaper, simpler) while
+  enforcing cross-team isolation at the Storage layer. The prefix
+  convention doubles as an at-a-glance audit tool.
 - **Alternatives considered**:
-  - **Chart.js + vue-chartjs**: fine, but styling requires extra work to
-    match shadcn-vue tokens.
-  - **ECharts / ApexCharts**: heavier bundle for the small chart surface
-    we need.
+  - **Bucket-per-team**: rejected — bucket creation would need a server
+    round-trip on team creation and complicates migrations.
 
-## R8: Migrations, type generation, seed workflow
+## R6: Public anonymous ranking
+
+- **Decision**: One function `public.get_public_ranking(p_slug text,
+  p_from date, p_to date) returns jsonb`, `security invoker`. Grants
+  `execute … to anon, authenticated`. Base tables remain locked down.
+- **Rationale**: Slug is the anonymous identifier; the function resolves
+  it to a team internally and never returns the team's UUID or names.
+  Same reasoning as Round 1 (dedicated projection surface).
+- **Alternatives considered**: `SECURITY DEFINER` — rejected (bypasses
+  RLS and requires meticulous auditing).
+
+## R7: Ranking calculation
+
+- **Decision**: SQL — `public.get_team_ranking(p_team uuid, p_from date,
+  p_to date) returns jsonb`. Lexicographic sort by category
+  `sort_order` × `sum(value) desc`; ties get equal rank via
+  `dense_rank()`. Public function is a projection over the same
+  algorithm but returns only jersey/scores.
+- **Rationale**: Single source of truth in SQL; the client stays
+  presentation-only. Small data volumes make materialization unnecessary.
+
+## R8: Photo consent enforcement
+
+- **Decision**: Same coarse rule as Round 1: `photo_consent boolean` on
+  `players`; the UI blurs/hides team photos for `player` viewers if any
+  active player in the team lacks consent. Trainer always sees raw.
+  Enforcement is UI-side (no face detection); the DB simply exposes
+  `photo_consent`.
+- **Rationale**: Unchanged from Round 1 (A12).
+
+## R9: Team switcher UX
+
+- **Decision**: A shadcn `Dropdown` in the top-nav lists the current
+  user's memberships. Selecting one navigates to `/t/<slug>/` (root
+  redirects role-aware). Current context = URL slug (single source of
+  truth). Last-visited slug persisted to `localStorage` for the login
+  redirect only.
+- **Rationale**: Keeps the app state stateless — URL is truth. Avoids a
+  global "current team" store that gets stale.
+
+## R10: Team creation server route
+
+- **Decision**: `POST /api/teams/create` (server route with service
+  role) does three things in one transaction:
+  1. Generates slug candidate via `slug(name)`; if collision, append
+     `-2`, `-3`, … until free.
+  2. `insert into teams(...)`.
+  3. `insert into memberships(user_id, team_id, role) values
+     (auth.uid(), <new_team_id>, 'trainer')`.
+- **Rationale**: The membership insert cannot be done from the client
+  because at that instant the caller has no `is_trainer(<new_team_id>)`
+  membership yet. Doing this on the server, atomically, avoids
+  chicken-and-egg RLS grief.
+- **Alternatives considered**:
+  - **Postgres `security definer` function**: viable but the server
+    route also validates and centralizes email-related side effects
+    (none here today, but likely tomorrow).
+  - **Client-side `insert` with a trigger that auto-creates the
+    membership**: rejected because RLS on `teams` would still need to
+    allow anon-of-membership insert, which is uglier.
+
+## R11: Invitation flow
+
+- **Decision**: `POST /api/invitations/issue` (server route, trainer-only
+  gate via `is_trainer(team_id)`):
+  1. `insert into invitations(team_id, email, role, token, invited_by,
+     expires_at)`.
+  2. `supabase.auth.admin.inviteUserByEmail(email, {redirectTo:
+     '<origin>/invite/<token>'})` — Supabase either creates the user
+     (if new) or sends a magic-link to the existing one, redirecting
+     post-login to the token page.
+  - The `/invite/[token]` page (client): if no session, calls
+    `useAuth.signIn` with the same email (magic-link); if a session
+    exists, shows an "Accept invitation to team X as role Y" card that
+    posts to `POST /api/invitations/accept` which:
+    1. Validates `token`, `expires_at > now()`, `accepted_at is null`.
+    2. Inserts membership.
+    3. Sets `accepted_at = now()`.
+    - If the email on the invitation ≠ the signed-in user's email:
+      requires an explicit confirmation ("Diese Einladung ist an
+      X@Y.tld; angemeldet bist du als Z@W.tld. Trotzdem annehmen?").
+- **Rationale**: Matches FR-007/008 + A17. Handling both "new user" and
+  "existing user" cases via the same Supabase invite path avoids
+  branching the UX.
+- **Alternatives considered**: signed-link-only (no server route) —
+  rejected because we want a durable, revocable `invitations` row.
+
+## R12: Chart library, package manager, validation
+
+- **Charts**: shadcn-vue Chart on top of Unovis (unchanged from Round 1).
+- **Package manager**: pnpm.
+- **Input validation**: zod schemas beside forms.
+- **Rationale**: All unchanged from Round 1; still the lightest option.
+
+## R13: Testing strategy
 
 - **Decision**:
-  - Local dev: `supabase start` (Docker) → `supabase migration new
-    <name>` → hand-edit SQL → `supabase db reset` for local schema
-    rebuild.
-  - Types: `supabase gen types typescript --local > app/types/database.ts`,
-    committed together with the migration.
-  - Seed: `supabase/seed.sql` inserts one default `point_categories`
-    row ("Trainingsleistung", 0–5, active, sort_order 1), one demo
-    trainer profile, and (in local dev only) a handful of demo players.
-- **Rationale**: Matches Supabase-recommended workflow; keeps types in
-  lockstep with schema (Principle V).
-- **Alternatives considered**:
-  - **Prisma or Drizzle** as a schema layer above Supabase: rejected —
-    duplicates `pg_catalog` truth, complicates RLS visibility, breaks
-    the direct `supabase-js` type flow.
+  - Vitest unit: ranking comparator (SQL golden-master), slug helper,
+    validators (zod).
+  - Vitest component: TrainingPointGrid, RankingTable.
+  - Playwright E2E per user story (US0..US6) plus **two** RLS
+    negative suites:
+    - `rls-negative-single-team.spec.ts` — a player in the team tries
+      to write points, upload photos, etc. (SC-003).
+    - `rls-negative-cross-team.spec.ts` — a trainer of Team A tries
+      to read Team B's `players`, `point_entries`, `training_photos`,
+      call `get_team_ranking(TeamB.id)`, download from
+      `storage/<TeamB.id>/…` (SC-009).
+  - CI: local Supabase via `supabase start` in the job; Playwright
+    against `pnpm dev`.
+- **Rationale**: Cross-team isolation is now a first-class success
+  criterion (SC-009) and gets its own negative-test file.
 
-## R9: Testing strategy
+## R14: Deployment target
 
-- **Decision**:
-  - **Unit** (Vitest): pure logic — timeframe helpers, category-order
-    comparator, form validators (zod schemas).
-  - **Component** (Vitest + `@nuxt/test-utils`): render-level tests for
-    the point-entry grid and the ranking table.
-  - **E2E** (Playwright): one spec per user story (US1..US6) plus a
-    dedicated `rls-negative.spec.ts` that logs in as `player`, attempts
-    to write to `point_entries` / read others' photos via direct
-    `supabase-js` calls, and asserts denial (delivers SC-003).
-  - E2E runs against a **local Supabase stack** in CI (`supabase start`
-    in the CI job), never against production.
-- **Rationale**: Splits fast unit tests from slower e2e; RLS gets a
-  first-class negative-test suite because Principle II is
-  NON-NEGOTIABLE.
-- **Alternatives considered**:
-  - **Cypress**: fine choice, but Playwright's `test.describe.serial`
-    and parallelism suit the small suite better.
-  - **Only e2e**: rejected — slower feedback loop for logic changes.
-
-## R10: Deployment target (RESOLVES `TODO(DEPLOYMENT_TARGET)`)
-
-- **Decision**: **Vercel** for the Nuxt app, **Supabase Cloud** for
-  Postgres/Auth/Storage.
-  - Vercel free tier covers this app's traffic; deep Nuxt integration;
-    per-PR preview deployments feed nicely into review.
-  - Supabase Cloud (Free or Pro depending on storage growth); daily
-    backups included on Pro.
-- **Rationale**: Simplest supported combo for Nuxt + Supabase; no
-  self-hosted infrastructure to babysit for a volunteer-run team app.
-  Recommends the constitution TODO be closed with this decision.
-- **Alternatives considered**:
-  - **Netlify**: comparable to Vercel; Vercel picked for slightly
-    better Nuxt tooling.
-  - **Cloudflare Pages + Workers**: cheaper but Nuxt server routes are
-    less smooth in the Workers runtime.
-  - **Self-hosted (Fly.io + self-hosted Supabase)**: rejected as
-    Principle-I violation for a small internal app.
-
-## R11: Package manager
-
-- **Decision**: **pnpm**.
-- **Rationale**: Faster installs, lower disk usage, well-supported by
-  Nuxt tooling and shadcn-vue CLI.
-
-## R12: Input validation
-
-- **Decision**: **zod** schemas co-located with forms.
-- **Rationale**: Category `value_min`/`value_max`, jersey uniqueness
-  (client-side pre-check), photo-file MIME type, and email invite input
-  all need runtime checks even though the DB is authoritative. zod
-  integrates with Nuxt forms and is small.
-- **Alternatives considered**:
-  - **Vee-Validate + yup**: comparable; zod chosen for the same reason
-    Nuxt ecosystem does — better TypeScript inference.
+- **Decision**: Vercel (Nuxt) + Supabase Cloud (Postgres/Auth/Storage).
+  Closes constitution `TODO(DEPLOYMENT_TARGET)`.
+- **Rationale**: Unchanged from Round 1; multi-tenancy doesn't change
+  the hosting recommendation.
 
 ---
 
-## Open items (deferred to /speckit-tasks or later)
+## Open items (deferred to /speckit-tasks or planning refinement)
 
-- **Rate limiting on the public ranking**: deferred. Team-scale traffic
-  makes this non-critical; if the URL leaks widely, add
-  `@nuxthub/ratelimit` or a Vercel edge middleware.
-- **Season start date configurability**: a `settings` singleton table
-  (`season_start date`) captured in data-model.md; UI to edit deferred
-  until after MVP if trainers ask for it.
-- **Concurrent-edit conflict resolution**: default **last-write-wins**
-  with `last_updated_at`/`last_updated_by` shown on the training
-  detail so trainers notice overwrites. No optimistic locking in v1.
-- **Backup**: Supabase Cloud handles daily backups on Pro tier — no
-  additional plan needed.
+- **Concurrent-edit conflicts**: default last-write-wins with
+  `last_updated_at`/`last_updated_by` visible in the training editor.
+  No optimistic locking in v1.
+- **Season-Grenze per team**: `settings.season_start` becomes
+  `team_settings.season_start` (per team). Trainer-only edit UI in
+  `/t/<slug>/team/settings.vue`.
+- **Rate-limiting** on public routes: rely on Supabase's built-in
+  rate-limits for `get_public_ranking` invocations in v1; revisit if
+  abuse observed.
+- **Backup**: Supabase Cloud daily backups on Pro tier.
+- **GDPR right-to-erasure across teams**: when a user deletes their
+  account (via a future button; not in v1 UI), the DB should keep
+  historical `point_entries` referencing them as `linked_user_id = null`
+  (already covered by `on delete set null`).

@@ -10,6 +10,7 @@ Companion artifacts:
 - Data model: [specs/001-points-and-photos/data-model.md](specs/001-points-and-photos/data-model.md)
 - RLS policies contract: [specs/001-points-and-photos/contracts/rls-policies.md](specs/001-points-and-photos/contracts/rls-policies.md)
 - Public ranking contract: [specs/001-points-and-photos/contracts/public-ranking.md](specs/001-points-and-photos/contracts/public-ranking.md)
+- Auth & onboarding flows: [specs/001-points-and-photos/contracts/auth-flows.md](specs/001-points-and-photos/contracts/auth-flows.md)
 - UI flows contract: [specs/001-points-and-photos/contracts/ui-flows.md](specs/001-points-and-photos/contracts/ui-flows.md)
 - Quickstart: [specs/001-points-and-photos/quickstart.md](specs/001-points-and-photos/quickstart.md)
 
