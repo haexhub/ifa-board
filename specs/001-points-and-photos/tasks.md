@@ -1,17 +1,16 @@
 ---
 
-description: "Task list for Trainingspunkte & Trainingsfotos (feature 001-points-and-photos)"
+description: "Task list for Trainingspunkte & Trainingsfotos v1 (multi-tenant, round 2)"
 ---
 
-# Tasks: Trainingspunkte & Trainingsfotos
+# Tasks: Trainingspunkte & Trainingsfotos (Multi-Tenant)
 
 **Input**: Design documents from `/specs/001-points-and-photos/`
 **Prerequisites**: [plan.md](./plan.md) (required), [spec.md](./spec.md) (required), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
-**Tests**: Tests are included where the plan and constitution explicitly
-require them — namely: E2E per user story, the RLS negative-test matrix
-(SC-003), and unit tests for the ranking helpers and validators. Broader
-component tests are omitted for v1 to stay YAGNI.
+**Tests**: Included where the plan and constitution require them —
+per-user-story E2E, two RLS negative-test suites (single-team SC-003 +
+cross-team SC-009), plus unit tests for ranking / slug / validators.
 
 **Organization**: Tasks are grouped by user story so each story can be
 implemented, tested, and delivered independently.
@@ -19,242 +18,276 @@ implemented, tested, and delivered independently.
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: US1..US6 for user-story phases; setup / foundational / polish carry no story label
+- **[Story]**: US0..US6 for user-story phases; setup / foundational / polish carry no story label
 - Include exact file paths in each description
 
 ## Path Conventions
 
-Single Nuxt project (see plan.md → Project Structure). Frontend lives
-under `app/`; database migrations under `supabase/`; tests under
-`tests/`.
+Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests under `tests/`.
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Bootstrap the Nuxt + Supabase project and tooling.
+**Purpose**: Bootstrap Nuxt + Supabase + tooling.
 
 - [ ] T001 Initialize pnpm workspace at repo root with `pnpm init`, set `packageManager: pnpm@9.x` and `engines.node: ">=22 <23"` in `package.json`
-- [ ] T002 Scaffold Nuxt 3 project structure (`nuxt.config.ts`, `tsconfig.json`, `app/`, `.gitignore`) with `pnpm dlx nuxi@latest init` into repo root
-- [ ] T003 [P] Add dev dependencies to `package.json`: `nuxt`, `@nuxtjs/supabase`, `@nuxtjs/tailwindcss`, `@vueuse/core`, `zod`, `@unovis/vue`, `@unovis/ts`, `@supabase/supabase-js`
-- [ ] T004 [P] Add dev tooling to `package.json`: `typescript`, `vitest`, `@nuxt/test-utils`, `@playwright/test`, `eslint`, `prettier`, `supabase`
-- [ ] T005 Configure `nuxt.config.ts`: enable `@nuxtjs/supabase` and `@nuxtjs/tailwindcss` modules; set `typescript.strict = true` and `typescript.typeCheck = true`; set `ssr: true`; add `supabase.redirectOptions` for `/login` and `/public/**` exclusion
-- [ ] T006 [P] Initialize Tailwind CSS mobile-first config in `tailwind.config.ts` (default breakpoints, `content` scanning `app/**/*.{vue,ts}`); add `app/assets/css/main.css` with Tailwind base directives; wire it into `nuxt.config.ts`
-- [ ] T007 [P] Install and initialize shadcn-vue via `pnpm dlx shadcn-vue@latest init`, choose New York style, TypeScript, `app/components/ui` as component location; commit `components.json`
-- [ ] T008 [P] Configure ESLint + Prettier in `.eslintrc.cjs` and `.prettierrc` using Nuxt's recommended config; add `pnpm lint` and `pnpm format` scripts to `package.json`
-- [ ] T009 Initialize local Supabase in `supabase/` via `supabase init`; commit generated `supabase/config.toml`
-- [ ] T010 [P] Add `.env.example` at repo root with `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY` placeholders and comments
-- [ ] T011 [P] Add pnpm scripts to `package.json`: `dev`, `build`, `preview`, `typecheck` (`tsc --noEmit`), `test:unit` (`vitest run`), `test:e2e` (`playwright test`), `gen:types` (`supabase gen types typescript --local > app/types/database.ts`), `db:reset` (`supabase db reset`)
-- [ ] T012 [P] Configure Playwright in `playwright.config.ts` with `webServer` running `pnpm dev` and using `http://localhost:3000` as `baseURL`
-- [ ] T013 [P] Configure Vitest in `vitest.config.ts` with `@nuxt/test-utils/config` and `environment: 'jsdom'`
-- [ ] T014 Add `.gitignore` entries for `.env`, `.output/`, `.nuxt/`, `node_modules/`, `dist/`, `playwright-report/`, `.supabase/`
+- [ ] T002 Scaffold Nuxt 3 structure (`nuxt.config.ts`, `tsconfig.json`, `app/`, `.gitignore`) with `pnpm dlx nuxi@latest init`
+- [ ] T003 [P] Add app dependencies to `package.json`: `nuxt`, `@nuxtjs/supabase`, `@nuxtjs/tailwindcss`, `@vueuse/core`, `zod`, `@unovis/vue`, `@unovis/ts`, `@supabase/supabase-js`, `slug`
+- [ ] T004 [P] Add dev dependencies to `package.json`: `typescript`, `vitest`, `@nuxt/test-utils`, `@playwright/test`, `eslint`, `prettier`, `supabase`
+- [ ] T005 Configure `nuxt.config.ts`: enable `@nuxtjs/supabase` and `@nuxtjs/tailwindcss` modules; set `typescript.strict = true` and `typescript.typeCheck = true`; set `ssr: true`; configure `supabase.redirectOptions` to exclude `/login`, `/callback`, `/public/**`, `/invite/**`
+- [ ] T006 [P] Initialize Tailwind mobile-first in `tailwind.config.ts` and `app/assets/css/main.css`; wire into `nuxt.config.ts`
+- [ ] T007 [P] Install shadcn-vue via `pnpm dlx shadcn-vue@latest init` (New York style, TypeScript, `app/components/ui`); commit `components.json`
+- [ ] T008 [P] Configure ESLint + Prettier in `.eslintrc.cjs` + `.prettierrc`; add `lint` and `format` scripts to `package.json`
+- [ ] T009 Initialize local Supabase via `supabase init`; commit `supabase/config.toml`; enable Inbucket for local email capture
+- [ ] T010 [P] Add `.env.example` at repo root with `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`
+- [ ] T011 [P] Add pnpm scripts to `package.json`: `dev`, `build`, `preview`, `typecheck`, `test:unit`, `test:e2e`, `gen:types`, `db:reset`
+- [ ] T012 [P] Configure `playwright.config.ts` with `webServer` running `pnpm dev` on `http://localhost:3000`
+- [ ] T013 [P] Configure `vitest.config.ts` with `@nuxt/test-utils/config` and `jsdom` environment
+- [ ] T014 Add `.gitignore` entries: `.env`, `.output/`, `.nuxt/`, `node_modules/`, `dist/`, `playwright-report/`, `.supabase/`
 
-**Checkpoint**: `pnpm dev` boots an empty Nuxt page; `supabase start` boots the local stack.
+**Checkpoint**: `pnpm dev` boots empty Nuxt; `supabase start` boots Postgres+Auth+Inbucket.
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Database schema, RLS policies, seed, auth wiring — every user story depends on these.
+**Purpose**: Schema, RLS helpers, RLS policies on every table, Storage, auth wiring, layouts, middlewares. Blocks all user stories.
 
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete.
+### Database schema
 
-### Database schema and constraints
-
-- [ ] T015 Create migration `supabase/migrations/20260910120000_init_schema.sql` with tables `user_profiles`, `players`, `point_categories`, `trainings`, `training_photos`, `point_entries`, `settings` per [data-model.md](./data-model.md); include all columns, PKs, FKs, `check` constraints, defaults, and the `players_active_jersey_uniq` partial unique index
-- [ ] T016 Create migration `supabase/migrations/20260910120500_triggers.sql` with functions and triggers: `set_last_updated_at()` (`before update`), `enforce_point_entry_range()` (`before insert or update on point_entries`), `enforce_training_has_photo()` (`before update on trainings` guarding `status='saved'`), and audit trigger `set_updated_by()` on all mutable tables
-- [ ] T017 Create migration `supabase/migrations/20260910121000_current_role.sql` with helper `public.current_role() returns text language sql stable` (definition per [contracts/rls-policies.md](./contracts/rls-policies.md))
+- [ ] T015 Migration `supabase/migrations/20260910120000_init_teams.sql` — create tables `teams`, `memberships` (composite PK, `role` check), `invitations` (unique `token`, partial unique on `(team_id, email) where accepted_at is null`) per [data-model.md](./data-model.md)
+- [ ] T016 Migration `supabase/migrations/20260910120500_helpers.sql` — `public.is_member(uuid)`, `public.is_trainer(uuid)`, `public.user_profiles` view
+- [ ] T017 Migration `supabase/migrations/20260910121000_team_scoped_tables.sql` — create `players`, `point_categories`, `trainings`, `training_photos`, `point_entries`, `team_settings` with `team_id` FKs, partial unique indexes (`players_active_jersey_per_team_uniq`, `players_linked_user_per_team_uniq`), other indexes per [data-model.md](./data-model.md)
+- [ ] T018 Migration `supabase/migrations/20260910121500_triggers.sql` — audit `set_last_updated_at()` on all mutable tables; `prevent_last_trainer_change()` on `memberships`; `enforce_point_entry_range()`; `enforce_point_entry_team_consistency()`; `enforce_training_has_photo()`; `enforce_photo_path_team()`; `enforce_player_linked_user_membership()`; `bootstrap_team_settings()` on `after insert on teams`
+- [ ] T019 Migration `supabase/migrations/20260910122000_rls_enable.sql` — `alter table … enable row level security` for every base table
 
 ### RLS policies
 
-- [ ] T018 Create migration `supabase/migrations/20260910121500_rls_enable.sql` that runs `alter table … enable row level security;` for all 7 tables
-- [ ] T019 [P] Create migration `supabase/migrations/20260910122000_rls_user_profiles.sql` with policies `up_self_read`, `up_trainer_read_all`, `up_trainer_write` from [contracts/rls-policies.md](./contracts/rls-policies.md)
-- [ ] T020 [P] Create migration `supabase/migrations/20260910122100_rls_players.sql` with policies `players_read_authenticated`, `players_write_trainer`
-- [ ] T021 [P] Create migration `supabase/migrations/20260910122200_rls_categories.sql` with policies `pc_read_authenticated`, `pc_write_trainer`
-- [ ] T022 [P] Create migration `supabase/migrations/20260910122300_rls_trainings.sql` with policies `tr_read_authenticated_saved`, `tr_write_trainer`
-- [ ] T023 [P] Create migration `supabase/migrations/20260910122400_rls_training_photos.sql` with policies `tp_read_authenticated`, `tp_write_trainer`
-- [ ] T024 [P] Create migration `supabase/migrations/20260910122500_rls_point_entries.sql` with policies `pe_read_authenticated`, `pe_write_trainer`
-- [ ] T025 [P] Create migration `supabase/migrations/20260910122600_rls_settings.sql` with policies `s_read_authenticated`, `s_write_trainer`
+- [ ] T020 [P] Migration `supabase/migrations/20260910122100_rls_teams.sql` with policies `teams_read_membership`, `teams_update_trainer` per [contracts/rls-policies.md](./contracts/rls-policies.md)
+- [ ] T021 [P] Migration `supabase/migrations/20260910122200_rls_memberships.sql` with `memberships_read_self_or_teamtrainer`, `memberships_write_trainer`
+- [ ] T022 [P] Migration `supabase/migrations/20260910122300_rls_invitations.sql` with `invitations_read_team_trainer`, `invitations_read_own_email`, `invitations_write_trainer`, `invitations_accept_own_email`
+- [ ] T023 [P] Migration `supabase/migrations/20260910122400_rls_players.sql` with `players_read_member`, `players_write_trainer`
+- [ ] T024 [P] Migration `supabase/migrations/20260910122500_rls_categories.sql` with `pc_read_member`, `pc_write_trainer`
+- [ ] T025 [P] Migration `supabase/migrations/20260910122600_rls_trainings.sql` with `tr_read_member_saved`, `tr_write_trainer`
+- [ ] T026 [P] Migration `supabase/migrations/20260910122700_rls_training_photos.sql` with join-through-trainings policies
+- [ ] T027 [P] Migration `supabase/migrations/20260910122800_rls_point_entries.sql` with `pe_read_member`, `pe_write_trainer` (join-through-trainings)
+- [ ] T028 [P] Migration `supabase/migrations/20260910122900_rls_team_settings.sql` with `ts_read_member`, `ts_write_trainer`
 
 ### Storage bucket
 
-- [ ] T026 Create migration `supabase/migrations/20260910123000_storage_photos.sql` that inserts bucket `training-photos` (private) and adds `tphoto_read_auth`, `tphoto_insert_trainer`, `tphoto_delete_trainer` policies on `storage.objects`
+- [ ] T029 Migration `supabase/migrations/20260910123000_storage_photos.sql` — insert bucket `training-photos` (private); policies `tphoto_read_member`, `tphoto_write_trainer` reading `team_id` from `(storage.foldername(name))[1]`
 
-### Seed and types
+### Ranking + public functions
 
-- [ ] T027 Create `supabase/seed.sql` inserting the singleton `settings` row (id=1, `season_start`) and the default `point_categories` row (`Trainingsleistung`, 0..5, active, sort_order=1)
-- [ ] T028 Run `pnpm db:reset` then `pnpm gen:types` and commit the generated `app/types/database.ts`
+- [ ] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); grants appropriate
+- [ ] T031 Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
-### App-level auth and layout scaffolding
+### Auth / layouts / middlewares scaffolding
 
-- [ ] T029 Add `app/middleware/auth.global.ts` — redirects unauthenticated to `/login?redirect=<path>` for everything except `/public/**` and `/login`, per [contracts/ui-flows.md](./contracts/ui-flows.md)
-- [ ] T030 [P] Add `app/middleware/trainer-only.ts` — reads role from `user_profiles`, redirects non-trainers to `/dashboard`
-- [ ] T031 [P] Add `app/layouts/default.vue` (authenticated shell with nav) and `app/layouts/public.vue` (bare shell for `/public/**`)
-- [ ] T032 [P] Add `app/composables/useTeamSession.ts` — returns `{ user, role, isTrainer, isPlayer }` derived from `useSupabaseUser` and the `user_profiles` row
-- [ ] T033 [P] Add `app/pages/login.vue` — Supabase email/password form + "Zur öffentlichen Rangliste" link
-- [ ] T034 [P] Add `app/pages/index.vue` — role-aware redirect (trainer → `/trainings`, player → `/dashboard`)
+- [ ] T032 Configure Supabase Auth for local dev in `supabase/config.toml`: disable email/password login, enable OTP magic-link, set email templates for invite + magic-link
+- [ ] T033 [P] Middleware `app/middleware/auth.global.ts` — allow `/login`, `/callback`, `/public/**`, `/invite/**`; else require session; else redirect `/login?redirect=<path>`
+- [ ] T034 [P] Middleware `app/middleware/team-context.ts` — for routes matching `/t/[slug]/**`: verify caller has membership in the team resolved from `slug`; else redirect `/start`
+- [ ] T035 [P] Middleware `app/middleware/trainer-only.ts` — for trainer-only sub-routes: assert `role === 'trainer'` in the current team context; else redirect `/t/<slug>/dashboard`
+- [ ] T036 [P] Layout `app/layouts/default.vue` — top nav with `TeamSwitcher`, user menu, sign-out; only for team-context routes
+- [ ] T037 [P] Layout `app/layouts/onboarding.vue` — bare shell for `/start`
+- [ ] T038 [P] Layout `app/layouts/public.vue` — bare shell for `/public/**`
+- [ ] T039 [P] Composable `app/composables/useAuth.ts` — `signInWithMagicLink(email, redirect?)`, `signOut()`, `useSession()`, reactive `email`
+- [ ] T040 [P] Composable `app/composables/useTeamContext.ts` — reactive `currentSlug` from route, `memberships[]` from DB, `currentTeam`, `isTrainer`
+- [ ] T041 [P] Page `app/pages/index.vue` — role-aware landing: session + memberships → `/t/<lastSlug>`; session + no memberships → `/start`; else `/login`
 
-**Checkpoint**: Migrations apply cleanly, RLS is on, seed inserts default category, login works, empty shell renders.
+**Checkpoint**: Migrations apply cleanly, RLS is on every table, Storage is set up, empty shell renders in each layout, middlewares redirect correctly.
 
 ---
 
-## Phase 3: User Story 1 — Trainer erfasst Punkte + Foto (Priority: P1) 🎯 MVP
+## Phase 3: User Story 0 — Signup, Team-Gründung, Einladungs-Annahme (Priority: P1)
 
-**Goal**: A trainer creates a training, enters point values for all active players across active categories, uploads at least one photo, and saves. The training and its entries persist and are visible in the trainings list.
+**Goal**: A new user signs up via magic-link, either founds a team (becoming its trainer) or accepts an invitation from an existing trainer; both flows land in `/t/<slug>/…` with appropriate role.
 
-**Independent Test**: With seed data (1 category, seeded trainer), the trainer signs in, creates a training, enters values for all active players (initially none — trainer creates 3 test players via SQL), uploads a photo, saves, and sees the training in `/trainings`.
+**Independent Test**: Two fresh browsers. User A signs up, founds "Test-Team", invites User B as player. User B receives the email in Inbucket, clicks the link, accepts, lands in `/t/test-team/dashboard`. Attempting `/t/other-team/*` redirects to `/start`.
+
+### Tests for User Story 0
+
+- [ ] T042 [P] [US0] Playwright test `tests/e2e/onboarding.spec.ts` — full US0 acceptance scenarios 1–5 (magic-link signup, team creation, invite issuance, invitation acceptance, last-trainer guard)
+- [ ] T043 [P] [US0] Unit test `tests/unit/slug.spec.ts` — golden-master for the `slug()` helper: unicode → ASCII, collisions → suffix `-2`, `-3`, stability of alpha-numeric edge cases
+
+### Implementation for User Story 0
+
+- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — service-role client; body `{name: string, slug?: string}`; generates unique slug (via `slug` npm + suffix loop); transaction: insert `teams` + insert `memberships(trainer)`; returns `{slug}`
+- [ ] T045 [P] [US0] Server route `app/server/api/invitations/issue.post.ts` — trainer-only (verify via authenticated Supabase client + `is_trainer(team_id)`); body `{team_id, email, role}`; generate 32-char URL-safe token; insert `invitations`; call `supabase.auth.admin.inviteUserByEmail` with `redirectTo`=`<origin>/invite/<token>`
+- [ ] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token, force?: boolean}`; validate not expired, not accepted; if session email ≠ invitation email and not `force`: 400 with confirm flag; else insert membership (on conflict do nothing) + set `accepted_at`
+- [ ] T047 [P] [US0] Composable `app/composables/useTeams.ts` — `createTeam({name, slug})` (POST /api/teams/create), `myTeams()` (list memberships joined with teams)
+- [ ] T048 [P] [US0] Composable `app/composables/useInvitations.ts` — `issue({team_id, email, role})`, `listOpenByTeam(team_id)`, `listMineByEmail()`, `revoke(id)`, `accept(token, force?)`
+- [ ] T049 [P] [US0] Component `app/components/auth/LoginMagicLink.vue` — single email input; submit → `useAuth.signInWithMagicLink`; shows "Prüfe deine E-Mails" success state
+- [ ] T050 [P] [US0] Component `app/components/auth/TeamCreateForm.vue` — zod-validated (name required, optional slug); submit → `useTeams.createTeam`; on success navigate `/t/<slug>`
+- [ ] T051 [P] [US0] Component `app/components/auth/InvitationAcceptCard.vue` — shows team name + offered role + expiry; "Annehmen" button → `useInvitations.accept`; handles the email-mismatch confirm dialog
+- [ ] T052 [P] [US0] Component `app/components/team/InviteForm.vue` — zod-validated (email + role); submit → `useInvitations.issue`
+- [ ] T053 [P] [US0] Component `app/components/team/InviteList.vue` — reads open invitations for the current team; "Widerrufen" per row
+- [ ] T054 [P] [US0] Component `app/components/team/MembershipTable.vue` — reads memberships for the current team; role dropdown per row (trainer-only); "Entfernen" per row; error toasts surface the last-trainer trigger error
+- [ ] T055 [P] [US0] Component `app/components/team/TeamSwitcher.vue` — dropdown of `useTeamContext.memberships`; selecting one navigates `/t/<slug>/`
+- [ ] T056 [US0] Page `app/pages/login.vue` — renders `LoginMagicLink`
+- [ ] T057 [US0] Page `app/pages/callback.vue` — reads Supabase auth callback; after session, calls `useTeams.myTeams()` and redirects (to `/start`, `/t/<slug>`, or the `redirect` query param)
+- [ ] T058 [US0] Page `app/pages/start.vue` — layout `onboarding`; renders `TeamCreateForm` + list of open invitations for `auth.email` (via `useInvitations.listMineByEmail`)
+- [ ] T059 [US0] Page `app/pages/invite/[token].vue` — either preview `InvitationAcceptCard` or (if unauthenticated) prompt for email + `signInWithMagicLink` with `redirect` back to same page
+- [ ] T060 [US0] Page `app/pages/t/[slug]/team/members.vue` — trainer-only; renders `MembershipTable` + `InviteList` + `InviteForm`
+
+**Checkpoint**: US0 works end-to-end — signup, team-founding, invitation issuance, invitation acceptance, membership management. All other stories can now build on the assumption of a valid team context.
+
+---
+
+## Phase 4: User Story 1 — Trainer erfasst Punkte + Foto (Priority: P1) 🎯 MVP anchor
+
+**Goal**: Inside a team, a trainer creates a training, enters point values for active players across active categories, uploads ≥1 photo, and saves. The training is visible in the team's training list.
+
+**Independent Test**: With `/t/<slug>/…` open as a trainer of a seeded team (US0 seed), create a training, fill grid, upload photo, save, see the training in `/t/<slug>/trainings`.
 
 ### Tests for User Story 1
 
-- [ ] T035 [P] [US1] Playwright test `tests/e2e/trainer-flow.spec.ts` — full US1 acceptance scenario (create training, fill grid, upload photo, save, verify visible in list)
+- [ ] T061 [P] [US1] Playwright test `tests/e2e/trainer-flow.spec.ts` — full US1 acceptance scenarios inside a team context
 
 ### Implementation for User Story 1
 
-- [ ] T036 [P] [US1] Composable `app/composables/usePlayers.ts` with `listActive()` returning active players ordered by `jersey_number nulls last, name`
-- [ ] T037 [P] [US1] Composable `app/composables/useCategories.ts` with `listActive()` returning active categories ordered by `sort_order`
-- [ ] T038 [P] [US1] Composable `app/composables/useTrainings.ts` with `createDraft(date, title, note)`, `updateEntry({trainingId, playerId, categoryId, value})`, `save(trainingId)`, `list()`, `get(id)`
-- [ ] T039 [US1] Composable `app/composables/useTrainingPhotos.ts` with `upload(trainingId, file)` (validates MIME + size against FR-042/043 client-side then uploads to `training-photos` bucket) and `list(trainingId)` returning signed URLs (600s TTL)
-- [ ] T040 [P] [US1] Component `app/components/trainings/TrainingPointGrid.vue` — sticky-header table, rows=players, cols=categories, `input type="number"` with `min/max` from category, auto-save on blur; ≥44px min-height per row on mobile
-- [ ] T041 [P] [US1] Component `app/components/trainings/TrainingPhotoUpload.vue` — multi-file picker, per-file progress + error, calls `useTrainingPhotos.upload`
-- [ ] T042 [P] [US1] Component `app/components/trainings/ConsentWarningBanner.vue` — takes an array of active players, shows a red shadcn `Alert` listing those with `photo_consent = false`
-- [ ] T043 [US1] Page `app/pages/trainings/new.vue` — creates a draft on mount, renders `TrainingPointGrid` + `TrainingPhotoUpload` + `ConsentWarningBanner`, "Speichern" button disabled until ≥1 photo uploaded, on click transitions status to `saved` and navigates to `/trainings/:id`
-- [ ] T044 [US1] Page `app/pages/trainings/[id].vue` — loads training, entries, photos; trainer sees the same editor as `new.vue`, player sees read-only summary; shows `last_updated_by`/`last_updated_at` per acceptance scenario 2
-- [ ] T045 [US1] Page `app/pages/trainings/index.vue` — chronological list of saved trainings; trainer sees drafts too; each row links to `/trainings/:id`
-- [ ] T046 [P] [US1] Unit test `tests/unit/validators.spec.ts` — zod schemas for point value (range from category), photo file (MIME whitelist FR-043, size ≤10 MB FR-042), and date (no future) all return correct errors on invalid input
+- [ ] T062 [P] [US1] Composable `app/composables/usePlayers.ts` — `listActive(team_id)` returning active players ordered by `jersey_number nulls last, name`
+- [ ] T063 [P] [US1] Composable `app/composables/useCategories.ts` — `listActive(team_id)` returning active categories ordered by `sort_order`
+- [ ] T064 [P] [US1] Composable `app/composables/useTrainings.ts` — `createDraft(team_id, date, title?, note?)`, `updateEntry({training_id, player_id, category_id, value})`, `save(training_id)`, `list(team_id)`, `get(id)`
+- [ ] T065 [US1] Composable `app/composables/useTrainingPhotos.ts` — `upload(training_id, team_id, file)` (validates MIME + size, uploads to `training-photos/<team_id>/<training_id>/<uuid>.<ext>`), `list(training_id)` returning signed URLs (600 s TTL)
+- [ ] T066 [P] [US1] Component `app/components/trainings/TrainingPointGrid.vue` — sticky-header table, rows=players, cols=categories, `input type="number"` with per-category `min/max`, auto-save on blur; ≥44px min-height per row
+- [ ] T067 [P] [US1] Component `app/components/trainings/TrainingPhotoUpload.vue` — multi-file picker; per-file progress + error
+- [ ] T068 [P] [US1] Component `app/components/trainings/ConsentWarningBanner.vue` — red shadcn `Alert` listing active players without `photo_consent`
+- [ ] T069 [US1] Page `app/pages/t/[slug]/trainings/new.vue` — trainer-only; creates a draft on mount, renders grid + uploader + banner; "Speichern" disabled until ≥1 photo; on save transitions to `saved` and navigates to `[id].vue`
+- [ ] T070 [US1] Page `app/pages/t/[slug]/trainings/[id].vue` — trainer sees editor; player sees read-only summary; shows `last_updated_by/at`
+- [ ] T071 [US1] Page `app/pages/t/[slug]/trainings/index.vue` — chronological list; trainer sees drafts + saved; player sees only saved
+- [ ] T072 [P] [US1] Unit test `tests/unit/validators.spec.ts` — zod schemas for point-value range, photo (MIME + size), date (no future)
 
-**Checkpoint**: User Story 1 is complete — the MVP loop is closed. Points and photos land in the DB via the UI.
+**Checkpoint**: MVP loop closed inside a team context.
 
 ---
 
-## Phase 4: User Story 2 — Spieler sieht Rangliste + eigenen Zeitverlauf (Priority: P1)
+## Phase 5: User Story 2 — Spieler sieht Rangliste + Zeitverlauf (Priority: P1)
 
-**Goal**: A player signs in and sees the team ranking over the default timeframe and a per-category chart of their own progress with team-average and team-median comparison lines.
+**Goal**: A player sees their team's ranking and their own per-category progression chart with team average + median lines.
 
-**Independent Test**: With saved trainings and point_entries from US1 (or seeded), a player-role account sees a numeric rank on `/dashboard` and reaches `/players/:me` where the chart renders.
-
-### Migrations for User Story 2
-
-- [ ] T047 [US2] Create migration `supabase/migrations/20260911100000_ranking_fns.sql` defining `public.get_team_ranking(p_from date, p_to date) returns jsonb` (implements lexicographic sort per FR-051 using `dense_rank()`) and `public.get_player_scores_by_category(p_player uuid, p_from date, p_to date) returns table(...)`; `grant execute` to `authenticated`
-- [ ] T048 [US2] Regenerate types with `pnpm gen:types` and commit updated `app/types/database.ts`
+**Independent Test**: Signed-in player of the seeded team sees rank in `/t/<slug>/dashboard`; `/t/<slug>/players/<me>` renders per-category charts.
 
 ### Tests for User Story 2
 
-- [ ] T049 [P] [US2] Playwright test `tests/e2e/player-flow.spec.ts` — sign in as player, `/dashboard` shows rank, `/players/:me` chart contains at least one data point per category
-- [ ] T050 [P] [US2] Unit test `tests/unit/ranking.spec.ts` — golden-master SQL test that seeds fixed entries and asserts `get_team_ranking` produces the expected ordering including tie handling (1, 2, 2, 4)
+- [ ] T073 [P] [US2] Playwright test `tests/e2e/player-flow.spec.ts` — dashboard rank + own progress chart in current team
+- [ ] T074 [P] [US2] Unit test `tests/unit/ranking.spec.ts` — golden-master seed asserts `get_team_ranking(team_id, from, to)` outputs the expected tie pattern (1, 2, 2, 4) and lexicographic order across categories
 
 ### Implementation for User Story 2
 
-- [ ] T051 [P] [US2] Composable `app/composables/useRanking.ts` — wraps `supabase.rpc('get_team_ranking', {p_from, p_to})`
-- [ ] T052 [P] [US2] Composable `app/composables/usePlayerScores.ts` — wraps `get_player_scores_by_category`; adds derived team average / median per category over the same timeframe
-- [ ] T053 [P] [US2] Composable `app/composables/useTimeframe.ts` — returns `{from, to, preset, setPreset, setCustom}` with presets `last-4-weeks | season | custom`; persists last preset in `localStorage`
-- [ ] T054 [P] [US2] Component `app/components/stats/TimeframePicker.vue` — shadcn `Select` + optional date inputs for custom range
-- [ ] T055 [P] [US2] Component `app/components/stats/RankingTable.vue` — renders `useRanking` output as a shadcn `Table`
-- [ ] T056 [US2] Component `app/components/stats/PlayerProgressChart.vue` — one Unovis line chart per active category, with the player's series + team-average + team-median dashed lines
-- [ ] T057 [US2] Page `app/pages/dashboard.vue` — shows player's own rank, top-3, timeframe picker, CTA to `/players/:me`
-- [ ] T058 [US2] Page `app/pages/players/[id].vue` — renders `PlayerProgressChart` and player basic info
-- [ ] T059 [US2] Page `app/pages/ranking/index.vue` — full team ranking (authenticated view, with names)
+- [ ] T075 [P] [US2] Composable `app/composables/useRanking.ts` — wraps `rpc('get_team_ranking', {p_team, p_from, p_to})`
+- [ ] T076 [P] [US2] Composable `app/composables/usePlayerScores.ts` — wraps `get_player_scores_by_category`; derives team avg / median per category over the same timeframe (skipping null point_entries)
+- [ ] T077 [P] [US2] Composable `app/composables/useTimeframe.ts` — presets `last-4-weeks | season | custom`, persisted in `localStorage` per team slug
+- [ ] T078 [P] [US2] Component `app/components/stats/TimeframePicker.vue` — shadcn `Select` + custom date range inputs
+- [ ] T079 [P] [US2] Component `app/components/stats/RankingTable.vue` — shadcn `Table` bound to `useRanking` output
+- [ ] T080 [US2] Component `app/components/stats/PlayerProgressChart.vue` — one Unovis line chart per active category; player series + team avg + team median dashed lines
+- [ ] T081 [US2] Page `app/pages/t/[slug]/dashboard.vue` — role-aware player dashboard: rank, top-3, timeframe picker
+- [ ] T082 [US2] Page `app/pages/t/[slug]/players/[id].vue` — player detail with `PlayerProgressChart` and basic info (name, jersey, position when set)
+- [ ] T083 [US2] Page `app/pages/t/[slug]/ranking.vue` — full team ranking view
 
-**Checkpoint**: User Story 2 complete. Players have a usable dashboard and a chart of their own progression.
+**Checkpoint**: US2 complete inside a team context.
 
 ---
 
-## Phase 5: User Story 3 — Trainer verwaltet Punktekategorien (Priority: P2)
+## Phase 6: User Story 3 — Trainer verwaltet Kategorien (Priority: P2)
 
-**Goal**: A trainer creates a new category (e.g. "Fairness", 0..5), the category appears as an additional column in the next training. Deactivating a category removes it from new-training forms but keeps it in historical trainings.
+**Goal**: Trainer manages team-scoped categories; new category appears as an additional grid column in the next training.
 
-**Independent Test**: Trainer opens `/categories`, creates "Fairness" 0..5 sort 2, then opens `/trainings/new` and sees "Fairness" as a second column.
+**Independent Test**: Trainer on `/t/<slug>/categories` creates "Fairness" (0..5, sort_order 2); `/t/<slug>/trainings/new` shows it as second column.
 
 ### Tests for User Story 3
 
-- [ ] T060 [P] [US3] Playwright test `tests/e2e/categories-flow.spec.ts` — create, rename, reorder, deactivate; verify effect on `/trainings/new`
+- [ ] T084 [P] [US3] Playwright test `tests/e2e/categories-flow.spec.ts` — create, rename, reorder, deactivate; check propagation to `/trainings/new`
 
 ### Implementation for User Story 3
 
-- [ ] T061 [US3] Extend `app/composables/useCategories.ts` with `create`, `update`, `deactivate`, `reorder(sortOrders: {id: string; sort_order: number}[])`
-- [ ] T062 [P] [US3] Component `app/components/categories/CategoryForm.vue` — zod-validated form for name, `value_min`, `value_max`, `sort_order`, `active`
-- [ ] T063 [P] [US3] Component `app/components/categories/CategoryList.vue` — sortable list with up/down buttons (mobile-friendly, no drag), "Deaktivieren" action; hides delete action when the category has any `point_entries` (checked via a `count(*)` query on load)
-- [ ] T064 [US3] Page `app/pages/categories/index.vue` — trainer-only (uses `middleware/trainer-only`), renders `CategoryList` + "Neue Kategorie" dialog with `CategoryForm`
+- [ ] T085 [US3] Extend `app/composables/useCategories.ts` with `create(team_id, …)`, `update(id, …)`, `deactivate(id)`, `reorder(team_id, [{id, sort_order}])`
+- [ ] T086 [P] [US3] Component `app/components/categories/CategoryForm.vue` — zod-validated (name, value_min ≤ value_max, sort_order, active)
+- [ ] T087 [P] [US3] Component `app/components/categories/CategoryList.vue` — up/down buttons (touch-friendly), "Deaktivieren" action, delete action hidden when `point_entries` exist (checked via count query)
+- [ ] T088 [US3] Page `app/pages/t/[slug]/categories/index.vue` — trainer-only; renders `CategoryList` + "Neue Kategorie" dialog with `CategoryForm`
 
-**Checkpoint**: US3 complete. Categories are trainer-configurable at runtime.
+**Checkpoint**: US3 complete.
 
 ---
 
-## Phase 6: User Story 4 — Trainer verwaltet Spielerstamm (Priority: P2)
+## Phase 7: User Story 4 — Trainer verwaltet Spielerstamm (Priority: P2)
 
-**Goal**: A trainer creates players, edits them, toggles `active` and `photo_consent`, and can send an email invitation to link a player to an auth account.
+**Goal**: Trainer manages players (name, jersey, position, `photo_consent`, `active`) and links them to invited accounts.
 
-**Independent Test**: Trainer opens `/players`, adds a player, toggles consent, invites the player, and the invited player later signs in via magic link and sees personalized data.
+**Independent Test**: Trainer on `/t/<slug>/players` adds a player, toggles consent, invites the player as a `player`-role membership; the invited user, upon acceptance, sees the same team's `/t/<slug>/dashboard`.
 
 ### Tests for User Story 4
 
-- [ ] T065 [P] [US4] Playwright test `tests/e2e/players-flow.spec.ts` — CRUD + toggle consent; validates unique-active-jersey constraint (creating a second active player with the same number errors)
+- [ ] T089 [P] [US4] Playwright test `tests/e2e/players-flow.spec.ts` — CRUD, consent toggle, active-jersey-uniqueness violation surfaced, `linked_user_id` set via invite
 
 ### Implementation for User Story 4
 
-- [ ] T066 [US4] Extend `app/composables/usePlayers.ts` with `list()`, `create`, `update`, `setActive`, `setConsent`
-- [ ] T067 [US4] Server route `app/server/api/players/[id]/invite.post.ts` — reads `NUXT_SUPABASE_SERVICE_ROLE_KEY`, calls `supabase.auth.admin.inviteUserByEmail`, then `insert into user_profiles(id, role, display_name) values (…, 'player', …)` and `update players set linked_user_id = … where id = :id`
-- [ ] T068 [P] [US4] Component `app/components/players/PlayerForm.vue` — zod-validated (name, jersey, position, consent, active)
-- [ ] T069 [P] [US4] Component `app/components/players/PlayerList.vue` — shadcn `Table` with edit / deactivate / invite actions per row; consent toggle inline
-- [ ] T070 [US4] Page `app/pages/players/index.vue` — trainer-only, renders `PlayerList` + "Neuer Spieler" dialog with `PlayerForm`
+- [ ] T090 [US4] Extend `app/composables/usePlayers.ts` with `list(team_id)`, `create(team_id, …)`, `update(id, …)`, `setActive(id, value)`, `setConsent(id, value)`, `linkUser(id, user_id)` (sets `linked_user_id`)
+- [ ] T091 [P] [US4] Component `app/components/players/PlayerForm.vue` — zod-validated (name required, jersey optional int, position optional, consent, active)
+- [ ] T092 [P] [US4] Component `app/components/players/PlayerList.vue` — table with edit / deactivate / invite actions; consent toggle inline; invite CTA opens the same `InviteForm` with pre-filled role=`player`
+- [ ] T093 [US4] Page `app/pages/t/[slug]/players/index.vue` — trainer-only; renders `PlayerList` + "Neuer Spieler" dialog with `PlayerForm`
 
-**Checkpoint**: US4 complete. Kader can be managed end-to-end.
+**Checkpoint**: US4 complete. Players end-to-end managed.
 
 ---
 
-## Phase 7: User Story 5 — Anonyme Public-Rangliste (Priority: P3)
+## Phase 8: User Story 5 — Anonyme Public-Rangliste pro Team (Priority: P3)
 
-**Goal**: An unauthenticated visitor opens `/public/ranking` and sees the ranking by jersey number with per-category totals. No PII leaves the DB.
+**Goal**: Anonymous visitors read a team's ranking by jersey number.
 
-**Independent Test**: Log out (or use a private window). Open `/public/ranking`. Rank + jersey number + per-category sums render. Direct attempts to hit `point_entries` or Storage as anon are denied.
+**Independent Test**: In a private window, `/public/<slug>/ranking` shows the ranking; `select * from point_entries` as anon is denied; team `id` never appears in the response.
 
-### Migrations for User Story 5
+### Migrations
 
-- [ ] T071 [US5] Create migration `supabase/migrations/20260912100000_public_ranking.sql` defining `public.get_public_ranking(p_from date, p_to date) returns jsonb` per [contracts/public-ranking.md](./contracts/public-ranking.md); `grant execute … to anon, authenticated`
-- [ ] T072 [US5] Regenerate types with `pnpm gen:types` and commit updated `app/types/database.ts`
+- [ ] T094 [US5] Migration `supabase/migrations/20260912100000_public_ranking.sql` — replace placeholder body of `public.get_public_ranking(text, date, date)` with real `SECURITY DEFINER` implementation using a dedicated `public_ranking_reader` role that has minimum `select` grants per [contracts/public-ranking.md](./contracts/public-ranking.md); `grant execute` to `anon, authenticated`
+- [ ] T095 [US5] Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
 ### Tests for User Story 5
 
-- [ ] T073 [P] [US5] Playwright test `tests/e2e/public-anon.spec.ts` — visit `/public/ranking` without a session, assert rank + jersey + score columns; then try direct `from('point_entries').select()` as anon via `supabase-js` and expect empty result / error
+- [ ] T096 [P] [US5] Playwright test `tests/e2e/public-anon.spec.ts` — visit `/public/<seeded-slug>/ranking` without session; verify data shape (jersey + rank + per-category sums only); direct `from('point_entries').select()` as anon returns empty
 
 ### Implementation for User Story 5
 
-- [ ] T074 [P] [US5] Composable `app/composables/usePublicRanking.ts` — calls `supabase.rpc('get_public_ranking', {p_from, p_to})` using the anon client (no session)
-- [ ] T075 [US5] Page `app/pages/public/ranking.vue` — uses `layouts/public.vue`, renders `RankingTable` variant with jersey-only display, `TimeframePicker` bound to `usePublicRanking`
+- [ ] T097 [P] [US5] Composable `app/composables/usePublicRanking.ts` — calls `rpc('get_public_ranking', {p_slug, p_from, p_to})` using the anon client
+- [ ] T098 [US5] Page `app/pages/public/[slug]/ranking.vue` — uses `layouts/public.vue`; renders a `RankingTable` variant that shows only jersey + rank + category sums; `TimeframePicker` bound to `usePublicRanking`; null jersey rendered as "—"
 
-**Checkpoint**: US5 complete. Public view accessible; PII stays private.
+**Checkpoint**: US5 complete.
 
 ---
 
-## Phase 8: User Story 6 — Trainingsfoto-Galerie (Priority: P3)
+## Phase 9: User Story 6 — Trainingsfoto-Galerie mit Consent (Priority: P3)
 
-**Goal**: Any authenticated user opens a training and sees the photo gallery; consent-flagged photos are hidden or blurred for player role; anonymous access to files is denied.
+**Goal**: Any authenticated team member sees photos of a training; consent-blocked training shows placeholder for `player` viewers.
 
-**Independent Test**: Player opens `/trainings/:id`, sees a scrollable mobile-friendly gallery; a training that references any active no-consent player shows the "Foto ausgeblendet — fehlende Einwilligung" placeholder for the player role.
+**Independent Test**: Player of team opens `/t/<slug>/trainings/:id` — consent-clean training renders gallery; consent-blocked training renders placeholder text; anon cannot reach the file.
 
 ### Tests for User Story 6
 
-- [ ] T076 [P] [US6] Playwright test `tests/e2e/photos-flow.spec.ts` — player views a saved training with photos: consent-clean training renders photos, consent-blocked training renders the placeholder
+- [ ] T099 [P] [US6] Playwright test `tests/e2e/photos-flow.spec.ts` — player sees photos of consent-clean training and placeholder for consent-blocked training; direct Storage URL access as anon is denied
 
 ### Implementation for User Story 6
 
-- [ ] T077 [P] [US6] Extend `app/composables/useTrainingPhotos.ts` with `deriveConsentStatus(trainingId)` — returns `'clean' | 'blocked'` by checking whether any current active player has `photo_consent = false`
-- [ ] T078 [US6] Component `app/components/trainings/TrainingPhotoGallery.vue` — mobile-scroll (`overflow-x: auto`) grid; renders `TrainingPhotoPlaceholder` when `role='player'` and consent is `blocked`
-- [ ] T079 [US6] Wire `TrainingPhotoGallery` into `app/pages/trainings/[id].vue` below the summary
+- [ ] T100 [P] [US6] Extend `app/composables/useTrainingPhotos.ts` with `deriveConsentStatus(team_id)` — returns `clean` iff every active player in the team has `photo_consent = true`
+- [ ] T101 [US6] Component `app/components/trainings/TrainingPhotoGallery.vue` — mobile-scroll grid; renders placeholder overlay for `player` role when consent is `blocked`; trainer always sees raw thumbnails
+- [ ] T102 [US6] Wire `TrainingPhotoGallery` into `app/pages/t/[slug]/trainings/[id].vue`
 
-**Checkpoint**: US6 complete. Photos are visible to authenticated users under the consent rule.
+**Checkpoint**: US6 complete.
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 10: Polish & Cross-Cutting Concerns
 
-**Purpose**: Deliver the security guarantee (SC-003, SC-008), the perf targets (SC-001, SC-002), deployment readiness, and documentation.
+**Purpose**: Deliver security guarantees (SC-003, SC-008, SC-009), performance targets (SC-001, SC-002, SC-010), deployment readiness, docs.
 
-- [ ] T080 [P] Playwright RLS negative-test suite `tests/e2e/rls-negative.spec.ts` implementing all 10 rows N1..N10 from [contracts/rls-policies.md](./contracts/rls-policies.md); delivers SC-003 and SC-008
-- [ ] T081 [P] Manual perf verification: on a throttled 4G mobile emulation, time the US1 flow end-to-end (15 players × 2 categories + photo) and confirm ≤2 min (SC-001); time player dashboard load ≤5 s (SC-002); record numbers in `specs/001-points-and-photos/perf-notes.md`
-- [ ] T082 [P] Add `vercel.json` at repo root with Nuxt preset and env-var declarations (`NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`)
-- [ ] T083 [P] Add `README.md` at repo root with a 20-line "How to run" summary linking to `specs/001-points-and-photos/quickstart.md`
-- [ ] T084 [P] Add CI config `.github/workflows/ci.yml` running `pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:e2e` against a Supabase local stack booted in the job
-- [ ] T085 Update constitution `.specify/memory/constitution.md`: close `TODO(DEPLOYMENT_TARGET)` with "Vercel + Supabase Cloud" per research R10; bump version to `1.0.1` (PATCH) with a fresh Sync Impact Report
+- [ ] T103 [P] Playwright RLS single-team negative suite `tests/e2e/rls-negative-single-team.spec.ts` implementing rows N1..N6 from [contracts/rls-policies.md](./contracts/rls-policies.md); delivers SC-003
+- [ ] T104 [P] Playwright RLS cross-team negative suite `tests/e2e/rls-negative-cross-team.spec.ts` implementing rows X1..X10; delivers SC-009 and SC-008
+- [ ] T105 [P] Manual perf verification: on 4G-emulated mobile time US0 signup + team-create (SC-010 ≤3 min), US1 flow (SC-001 ≤2 min), US2 dashboard load (SC-002 ≤5 s); record in `specs/001-points-and-photos/perf-notes.md`
+- [ ] T106 [P] Add `vercel.json` at repo root declaring the Nuxt preset and required env vars (`NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`); document the Supabase redirect-allowlist requirement
+- [ ] T107 [P] Add `README.md` at repo root — 20-line "How to run" + links to `specs/001-points-and-photos/quickstart.md` and `spec.md`
+- [ ] T108 [P] CI config `.github/workflows/ci.yml` — `pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:e2e` against local Supabase booted in-job
+- [ ] T109 Update `.specify/memory/constitution.md`: close `TODO(DEPLOYMENT_TARGET)` with "Vercel + Supabase Cloud"; note the auth-model change (magic-link only) in the Tech Stack section; bump version to `1.1.0` (MINOR — expanded guidance) with a fresh Sync Impact Report
+- [ ] T110 Page `app/pages/t/[slug]/team/settings.vue` — trainer-only; edit team name + slug (with warning) + season_start; updates `teams` and `team_settings`
 
 ---
 
@@ -262,91 +295,76 @@ under `app/`; database migrations under `supabase/`; tests under
 
 ### Phase dependencies
 
-- **Setup (Phase 1)**: no dependencies; starts immediately.
-- **Foundational (Phase 2)**: depends on Setup completion; BLOCKS all user-story phases.
-- **User Stories (Phases 3–8)**: all start after Foundational completes.
-  - US1 (P1) is the MVP scope.
-  - US2 (P1) depends only on Foundational + `get_team_ranking` migration (T047); it can start in parallel with US1 as soon as T047 lands.
-  - US3, US4, US5, US6 depend only on Foundational and can proceed independently.
-- **Polish (Phase 9)**: after the desired user stories are complete.
-
-### User-story dependencies
-
-- **US1 → nobody**. First to deliver value.
-- **US2 → US1** in practice (needs saved trainings/entries to display) but not by build order — US2 can build against seeded data.
-- **US3 / US4 → Foundational only.**
-- **US5 → Foundational only.** Deliver last of the P3s because it's most visible.
-- **US6 → US1** (needs photos to exist) but its own code path is independent.
+- **Setup (Phase 1)**: no deps.
+- **Foundational (Phase 2)**: depends on Setup; BLOCKS all user stories.
+- **US0 (Phase 3, P1)**: after Foundational. **BLOCKS** US1..US6 because every other story needs a team context and a user with a membership.
+- **US1 (Phase 4, P1)**: after US0.
+- **US2 (Phase 5, P1)**: after US0; can start in parallel with US1 once T094 is not yet needed (T075/T076 depend only on T030 which is Foundational).
+- **US3 / US4 (Phases 6, 7, P2)**: after US0. Independent of US1/US2 code path.
+- **US5 (Phase 8, P3)**: after US0. Real `get_public_ranking` body is written in T094; the placeholder from T030 keeps types stable in the meantime.
+- **US6 (Phase 9, P3)**: after US1 (needs at least one saved training with photos).
+- **Polish (Phase 10)**: after all desired user stories.
 
 ### Within each user story
 
 - Migrations before composables; composables before components; components before pages.
-- Playwright/unit tests can be authored in parallel with implementation, but MUST be passing before the phase is called done.
+- Tests can be authored in parallel with implementation but MUST pass before the phase is "done".
 - Commit after each logical group.
 
 ### Parallel opportunities
 
-- All setup tasks marked [P] (T003, T004, T006, T007, T008, T010–T013) run in parallel.
-- RLS migration files T019–T025 are independent files → parallel.
-- Composables and components within a story are usually independent files → parallel.
-- Tests within a story are independent files → parallel.
-- Different user stories can be worked on by different contributors in parallel once Foundational completes.
+- All setup tasks marked [P] (T003–T014 minus T005/T009/T014).
+- RLS policy migrations T020–T028 are independent files → parallel.
+- Composables + components within a story are usually independent files → parallel.
+- Different user stories can be built in parallel by different contributors once US0 is done.
 
 ---
 
-## Parallel Example: User Story 1
+## Parallel Example: US0
 
 ```bash
-# After T035 (test authored), launch these in parallel:
-Task: "T036 composable app/composables/usePlayers.ts"
-Task: "T037 composable app/composables/useCategories.ts"
-Task: "T038 composable app/composables/useTrainings.ts"
-Task: "T040 component app/components/trainings/TrainingPointGrid.vue"
-Task: "T041 component app/components/trainings/TrainingPhotoUpload.vue"
-Task: "T042 component app/components/trainings/ConsentWarningBanner.vue"
-Task: "T046 unit test tests/unit/validators.spec.ts"
+# After T042/T043 (tests authored), launch these in parallel:
+Task: "T044 server route app/server/api/teams/create.post.ts"
+Task: "T045 server route app/server/api/invitations/issue.post.ts"
+Task: "T046 server route app/server/api/invitations/accept.post.ts"
+Task: "T047 composable app/composables/useTeams.ts"
+Task: "T048 composable app/composables/useInvitations.ts"
+Task: "T049 component app/components/auth/LoginMagicLink.vue"
+Task: "T050 component app/components/auth/TeamCreateForm.vue"
+Task: "T051 component app/components/auth/InvitationAcceptCard.vue"
+Task: "T052 component app/components/team/InviteForm.vue"
+Task: "T053 component app/components/team/InviteList.vue"
+Task: "T054 component app/components/team/MembershipTable.vue"
+Task: "T055 component app/components/team/TeamSwitcher.vue"
 ```
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US1 only)
+### MVP First (US0 + US1)
 
-1. Complete Phase 1: Setup.
-2. Complete Phase 2: Foundational (CRITICAL — blocks all stories).
-3. Complete Phase 3: User Story 1.
-4. **STOP and VALIDATE**: run T035 + manually walk the US1 acceptance scenarios.
-5. Deploy to a Vercel preview if ready.
+1. Phase 1 Setup.
+2. Phase 2 Foundational (CRITICAL — blocks all).
+3. Phase 3 US0 (signup + team + invite) — **without US0, no user story is testable**.
+4. Phase 4 US1 (trainer point entry) — closes the first value loop.
+5. **STOP and VALIDATE** — run T042 + T061 and walk the acceptance scenarios manually on mobile.
+6. Vercel preview deploy.
 
 ### Incremental Delivery
 
-1. Setup + Foundational → foundation ready.
-2. US1 → test → deploy preview → **MVP**.
-3. US2 → test → deploy preview → app becomes useful to players.
-4. US3 + US4 → in parallel, test → deploy.
-5. US5 + US6 → in parallel, test → deploy.
-6. Polish (Phase 9) → production release.
+- After MVP (US0+US1) → US2 → US3+US4 in parallel → US5+US6 in parallel → Polish.
 
 ### Parallel Team Strategy
 
-With multiple contributors:
-
-1. All: Setup + Foundational.
-2. Once T047 lands: Dev A on US1, Dev B on US2, Dev C on US3+US4.
-3. After US1 saved-training row is real: Dev D picks up US6.
-4. US5 in parallel with anything.
+- All: Setup + Foundational + US0.
+- Then Dev A: US1; Dev B: US2; Dev C: US3+US4; Dev D: US5 (after T094 lands) + US6.
 
 ---
 
 ## Notes
 
 - [P] = different files, no incomplete dependency.
-- [US#] labels bind tasks to acceptance scenarios in spec.md.
-- Tests included only where they deliver a Success Criterion or an
-  acceptance scenario — no broad component-test suite in v1.
-- Commit after each logical group (typically each task) so a rollback
-  never crosses story boundaries.
-- Every schema change (T015, T016, T017, T027, T047, T071) MUST be
-  paired with a `pnpm gen:types` commit before the next story task
-  proceeds (Constitution Principle V).
+- [US#] labels bind tasks to spec.md acceptance scenarios.
+- Every schema-affecting migration (T015–T018, T030, T094, plus any polish migration) MUST be paired with a `pnpm gen:types` commit before the next task proceeds (Constitution Principle V).
+- The cross-team negative suite (T104) is essential — do not skip.
