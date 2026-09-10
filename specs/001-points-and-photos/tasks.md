@@ -81,7 +81,7 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 ### Ranking + public functions
 
 - [X] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); grants appropriate
-- [ ] T031 Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
+- [X] T031 Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
 ### Auth / layouts / middlewares scaffolding
 

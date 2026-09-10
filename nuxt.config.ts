@@ -22,6 +22,7 @@ export default defineNuxtConfig({
       exclude: ['/login', '/callback', '/public/**', '/invite/**'],
       cookieRedirect: false,
     },
+    types: '~/types/database.ts',
   },
 
   imports: {
