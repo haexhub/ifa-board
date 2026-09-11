@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { serverSupabaseUser } from '#supabase/server'
 import { useAdminDb, schema } from '~/server/utils/db'
 import { nextUniqueSlug, toSlug } from '~/utils/slug'

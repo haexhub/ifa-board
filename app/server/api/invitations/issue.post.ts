@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { z } from 'zod'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Database } from '~/types/database'
 import { useAdminDb, schema } from '~/server/utils/db'
@@ -39,17 +39,32 @@ export default defineEventHandler(async (event) => {
 
   let invitationId: string
   try {
-    const [inserted] = await db
-      .insert(schema.invitations)
-      .values({
-        teamId: team_id,
-        email,
-        role,
-        token,
-        invitedBy: user.id,
-      })
-      .returning({ id: schema.invitations.id })
-    invitationId = inserted!.id
+    const result = await db.transaction(async (tx) => {
+      await tx
+        .delete(schema.invitations)
+        .where(
+          and(
+            eq(schema.invitations.teamId, team_id),
+            sql`lower(${schema.invitations.email}) = ${email}`,
+            isNull(schema.invitations.acceptedAt),
+            sql`${schema.invitations.expiresAt} <= now()`,
+          ),
+        )
+
+      const [inserted] = await tx
+        .insert(schema.invitations)
+        .values({
+          teamId: team_id,
+          email,
+          role,
+          token,
+          invitedBy: user.id,
+        })
+        .returning({ id: schema.invitations.id })
+      if (!inserted) throw new Error('Invitation insert returned no row')
+      return inserted
+    })
+    invitationId = result.id
   } catch (err) {
     const e = err as { code?: string; message?: string }
     if (e.code === '23505') {
@@ -67,7 +82,7 @@ export default defineEventHandler(async (event) => {
     email,
     options: {
       shouldCreateUser: true,
-      emailRedirectTo: `${origin}/callback`,
+      emailRedirectTo: `${origin}/callback?redirect=${encodeURIComponent(`/invite/${token}`)}`,
     },
   })
   if (mailErr) {

@@ -21,19 +21,26 @@ type Invite = {
 
 const invitations = ref<Invite[]>([])
 const loading = ref(true)
+const error = ref<string | null>(null)
 
 const load = async () => {
   loading.value = true
-  const rows = await listMineByEmail()
-  invitations.value = rows.map((r) => ({
-    token: r.token,
-    role: r.role as 'trainer' | 'player',
-    team_name: r.teams?.name ?? '—',
-    team_slug: r.teams?.slug ?? null,
-    expires_at: r.expires_at,
-    email: user.value?.email ?? '',
-  }))
-  loading.value = false
+  error.value = null
+  try {
+    const rows = await listMineByEmail()
+    invitations.value = rows.map((r) => ({
+      token: r.token,
+      role: r.role as 'trainer' | 'player',
+      team_name: r.teams?.name ?? '—',
+      team_slug: r.teams?.slug ?? null,
+      expires_at: r.expires_at,
+      email: user.value?.email ?? '',
+    }))
+  } catch (err) {
+    error.value = (err as Error).message || 'Einladungen konnten nicht geladen werden.'
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(load)
@@ -56,6 +63,7 @@ onMounted(load)
     <div class="space-y-3">
       <h2 class="text-lg font-semibold text-neutral-900">Einladungen an dich</h2>
       <p v-if="loading" class="text-sm text-neutral-500">Lade…</p>
+      <p v-else-if="error" class="text-sm text-red-700" role="alert">{{ error }}</p>
       <p v-else-if="invitations.length === 0" class="text-sm text-neutral-500">
         Keine offenen Einladungen für {{ user?.email }}.
       </p>

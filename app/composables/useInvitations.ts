@@ -26,6 +26,7 @@ export const useInvitations = () => {
       .select('id, email, role, expires_at, created_at, accepted_at')
       .eq('team_id', team_id)
       .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     if (error) throw error
     return data ?? []
@@ -39,6 +40,7 @@ export const useInvitations = () => {
       .select('id, token, role, expires_at, team_id, teams(name, slug)')
       .eq('email', email.toLowerCase())
       .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     if (error) throw error
     return data ?? []

@@ -14,7 +14,12 @@ const error = ref<string | null>(null)
 const finalize = async () => {
   const rawRedirect = route.query.redirect
   const redirect =
-    typeof rawRedirect === 'string' && rawRedirect.startsWith('/') ? rawRedirect : null
+    typeof rawRedirect === 'string' &&
+    rawRedirect.startsWith('/') &&
+    rawRedirect[1] !== '/' &&
+    rawRedirect[1] !== '\\'
+      ? rawRedirect
+      : null
 
   if (redirect) {
     await navigateTo(redirect, { replace: true })

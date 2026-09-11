@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import LoginMagicLink from '~/components/auth/LoginMagicLink.vue'
 
 definePageMeta({
@@ -8,7 +9,9 @@ definePageMeta({
 const route = useRoute()
 const redirect = computed(() => {
   const raw = route.query.redirect
-  return typeof raw === 'string' && raw.startsWith('/') ? raw : undefined
+  return typeof raw === 'string' && raw.startsWith('/') && raw[1] !== '/' && raw[1] !== '\\'
+    ? raw
+    : undefined
 })
 const initialEmail = computed(() => {
   const raw = route.query.email

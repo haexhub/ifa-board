@@ -61,15 +61,20 @@ const trainerCount = computed(() => rows.value.filter((r) => r.role === 'trainer
 
 const changeRole = async (row: Row, next: 'trainer' | 'player') => {
   error.value = null
-  const { error: err } = await client
+  const { data, error: err } = await client
     .from('memberships')
     .update({ role: next })
     .eq('team_id', props.teamId)
     .eq('user_id', row.user_id)
+    .select('user_id')
   if (err) {
     error.value = /at least one trainer/i.test(err.message)
       ? 'Ein Team braucht mindestens einen Trainer.'
       : err.message
+    return
+  }
+  if (!data || data.length === 0) {
+    error.value = 'Mitglied konnte nicht aktualisiert werden.'
     return
   }
   row.role = next
@@ -77,15 +82,20 @@ const changeRole = async (row: Row, next: 'trainer' | 'player') => {
 
 const remove = async (row: Row) => {
   error.value = null
-  const { error: err } = await client
+  const { data, error: err } = await client
     .from('memberships')
     .delete()
     .eq('team_id', props.teamId)
     .eq('user_id', row.user_id)
+    .select('user_id')
   if (err) {
     error.value = /at least one trainer/i.test(err.message)
       ? 'Ein Team braucht mindestens einen Trainer.'
       : err.message
+    return
+  }
+  if (!data || data.length === 0) {
+    error.value = 'Mitglied konnte nicht entfernt werden.'
     return
   }
   rows.value = rows.value.filter((r) => r.user_id !== row.user_id)

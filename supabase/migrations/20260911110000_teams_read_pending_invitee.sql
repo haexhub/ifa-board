@@ -14,10 +14,8 @@ as $$
       from public.invitations i
      where i.team_id = p_team
        and i.accepted_at is null
-       and lower(i.email) = lower(coalesce(
-             auth.jwt() ->> 'email',
-             (auth.jwt() -> 'user_metadata' ->> 'email')
-           ))
+       and i.expires_at > now()
+       and lower(i.email) = lower(auth.jwt() ->> 'email')
   );
 $$;
 
