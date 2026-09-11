@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import TeamSwitcher from '~/components/team/TeamSwitcher.vue'
 
 const route = useRoute()
 const user = useSupabaseUser()
@@ -33,6 +34,7 @@ const signOut = async () => {
         <span v-else class="font-semibold text-neutral-900">ifa-board</span>
 
         <div class="flex items-center gap-2">
+          <TeamSwitcher v-if="currentSlug" />
           <span v-if="user?.email" class="text-sm text-neutral-600 hidden sm:inline">
             {{ user.email }}
           </span>

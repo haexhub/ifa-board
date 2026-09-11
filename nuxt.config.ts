@@ -31,14 +31,18 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     supabaseServiceRoleKey: '',
+    supabaseDbUrl: '',
   },
 
   alias: {
     '@': fileURLToPath(new URL('./app', import.meta.url)),
     '~': fileURLToPath(new URL('./app', import.meta.url)),
+    '~~': fileURLToPath(new URL('.', import.meta.url)),
+    '@@': fileURLToPath(new URL('.', import.meta.url)),
   },
 
   srcDir: 'app/',
+  serverDir: 'app/server',
 
   future: {
     compatibilityVersion: 4,

@@ -1,0 +1,48 @@
+import { z } from 'zod'
+import { sql } from 'drizzle-orm'
+import { serverSupabaseUser } from '#supabase/server'
+import { useAdminDb } from '~/server/utils/db'
+
+const bodySchema = z.object({
+  token: z.string().min(8).max(128),
+})
+
+export default defineEventHandler(async (event) => {
+  const user = await serverSupabaseUser(event)
+  if (!user || !user.email) {
+    throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+  }
+
+  const parsed = bodySchema.safeParse(await readBody(event))
+  if (!parsed.success) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid payload' })
+  }
+
+  const db = useAdminDb()
+
+  try {
+    const [row] = await db.execute<{ slug: string; already_accepted: boolean }>(
+      sql`select slug, already_accepted from public.accept_invitation(${parsed.data.token}, ${user.id}::uuid, ${user.email})`,
+    )
+    return {
+      slug: row?.slug ?? null,
+      alreadyAccepted: row?.already_accepted ?? false,
+    }
+  } catch (err) {
+    const e = err as { code?: string; message?: string }
+    const msg = e.message ?? ''
+    if (/invitation not found/i.test(msg) || e.code === 'P0002') {
+      throw createError({ statusCode: 404, statusMessage: 'Invitation not found' })
+    }
+    if (/invitation expired/i.test(msg)) {
+      throw createError({ statusCode: 410, statusMessage: 'Invitation expired' })
+    }
+    if (/email mismatch/i.test(msg)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Invitation email does not match your account',
+      })
+    }
+    throw createError({ statusCode: 500, statusMessage: msg || 'Accept failed' })
+  }
+})

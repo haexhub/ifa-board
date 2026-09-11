@@ -41,12 +41,9 @@ comment on function public.is_member(uuid) is
 comment on function public.is_trainer(uuid) is
   'RLS helper: is auth.uid() a trainer of the given team?';
 
--- Keep auth.users private. Profiles are synchronized into a separate table
--- and exposed only through an RLS policy for users sharing a team.
-create table public.user_profiles (
-  id           uuid primary key references auth.users(id) on delete cascade,
-  display_name text
-);
+-- The `public.user_profiles` table itself is owned by Drizzle (see
+-- 20260910110000_init_schema.sql). This migration only wires the RLS/sync
+-- policies and functions around it.
 
 comment on table public.user_profiles is
   'RLS-protected display-name projection of auth.users.';
