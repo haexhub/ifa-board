@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue'
 import PlayerProgressChart from '~/components/stats/PlayerProgressChart.vue'
 import TimeframePicker from '~/components/stats/TimeframePicker.vue'
 import { useCategories, type ActiveCategory } from '~/composables/useCategories'
-import { usePlayerScores, type CategoryScoreRow } from '~/composables/usePlayerScores'
+import { usePlayerScores, type PlayerScoreWithTeamStats } from '~/composables/usePlayerScores'
+import { usePlayers } from '~/composables/usePlayers'
 import { useTeamSettings } from '~/composables/useTeamSettings'
 import { useTimeframe } from '~/composables/useTimeframe'
 import type { Database } from '~/types/database'
@@ -21,7 +22,8 @@ const teamId = computed(() => currentTeam.value?.id ?? '')
 const slug = computed(() => currentSlug.value ?? '')
 
 const { listActive: listCategories } = useCategories()
-const { forPlayer, playerTimeSeries } = usePlayerScores()
+const { forPlayer, teamStatsForActivePlayers, playerTimeSeries } = usePlayerScores()
+const { listActive: listPlayers } = usePlayers()
 const { get: getSettings } = useTeamSettings()
 
 const seasonStart = ref<string | null>(null)
@@ -39,31 +41,45 @@ type PlayerInfo = {
 
 const player = ref<PlayerInfo | null>(null)
 const categories = ref<ActiveCategory[]>([])
-const scores = ref<CategoryScoreRow[]>([])
+const activePlayerIds = ref<string[]>([])
+const scores = ref<PlayerScoreWithTeamStats[]>([])
 const timeSeries = ref<Map<string, { date: string; value: number }[]>>(new Map())
 const isLoading = ref(false)
+const loadError = ref<string | null>(null)
+let latestLoad = 0
 
 const timeframe = useTimeframe(slug, seasonStart)
 
 const loadStatic = async () => {
-  const [{ data: p }, cs] = await Promise.all([
+  const [{ data: p }, cs, activePlayers] = await Promise.all([
     client
       .from('players')
       .select('id, name, jersey_number, position')
       .eq('id', playerId)
+      .eq('team_id', teamId.value)
       .maybeSingle(),
     teamId.value ? listCategories(teamId.value) : Promise.resolve([]),
+    teamId.value ? listPlayers(teamId.value) : Promise.resolve([]),
   ])
   player.value = (p as PlayerInfo) ?? null
   categories.value = cs
+  activePlayerIds.value = activePlayers.map(({ id }) => id)
 }
 
 const loadTimeframed = async () => {
-  if (!teamId.value) return
+  if (!teamId.value || !player.value) return
+  const loadId = ++latestLoad
   isLoading.value = true
+  loadError.value = null
   try {
-    const [s, series] = await Promise.all([
+    const [s, teamStats, series] = await Promise.all([
       forPlayer(teamId.value, playerId, timeframe.range.value.from, timeframe.range.value.to),
+      teamStatsForActivePlayers(
+        teamId.value,
+        timeframe.range.value.from,
+        timeframe.range.value.to,
+        activePlayerIds.value,
+      ),
       playerTimeSeries(
         teamId.value,
         playerId,
@@ -71,10 +87,22 @@ const loadTimeframed = async () => {
         timeframe.range.value.to,
       ),
     ])
-    scores.value = s
+    if (loadId !== latestLoad) return
+    scores.value = s.map((row) => {
+      const stats = teamStats.get(row.category_id)
+      return {
+        ...row,
+        team_avg: stats?.avg ?? null,
+        team_median: stats?.median ?? null,
+      }
+    })
     timeSeries.value = series
+  } catch (err) {
+    if (loadId === latestLoad) {
+      loadError.value = err instanceof Error ? err.message : 'Konnte Verlauf nicht laden'
+    }
   } finally {
-    isLoading.value = false
+    if (loadId === latestLoad) isLoading.value = false
   }
 }
 
@@ -96,9 +124,7 @@ watch(
         </span>
         {{ player.name }}
       </h1>
-      <p v-if="player.position" class="text-sm text-neutral-600">
-        Position: {{ player.position }}
-      </p>
+      <p v-if="player.position" class="text-sm text-neutral-600">Position: {{ player.position }}</p>
     </header>
 
     <TimeframePicker
@@ -112,6 +138,10 @@ watch(
     />
 
     <p v-if="isLoading" class="text-sm text-neutral-500">Lade Verlauf…</p>
+    <p v-else-if="loadError" class="text-sm text-red-700" role="alert">
+      {{ loadError }}
+      <button type="button" class="ml-2 underline" @click="loadTimeframed">Erneut versuchen</button>
+    </p>
     <PlayerProgressChart
       v-else
       :categories="categories"

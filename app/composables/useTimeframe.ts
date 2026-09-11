@@ -67,6 +67,9 @@ export const useTimeframe = (
   watch(
     slug,
     (s) => {
+      preset.value = 'last-4-weeks'
+      customFrom.value = null
+      customTo.value = null
       if (s) applyStored(s)
     },
     { immediate: true },

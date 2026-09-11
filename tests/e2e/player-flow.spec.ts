@@ -116,7 +116,10 @@ test.describe('US2 — player dashboard + progress chart', () => {
     await trainerPage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
 
     await trainerPage.goto(`/t/${teamSlug}/team/members`, { waitUntil: 'networkidle' })
-    await trainerPage.getByLabel(/e-mail/i).first().fill(playerEmail)
+    await trainerPage
+      .getByLabel(/e-mail/i)
+      .first()
+      .fill(playerEmail)
     await trainerPage.getByLabel(/rolle/i).selectOption('player')
     await trainerPage.getByRole('button', { name: /einladen/i }).click()
     await expect(trainerPage.getByText(playerEmail)).toBeVisible({ timeout: 10_000 })
@@ -216,6 +219,12 @@ test.describe('US2 — player dashboard + progress chart', () => {
     await expect(playerPage.getByTestId('player-detail-page')).toBeVisible()
     await expect(playerPage.getByTestId(`player-progress-chart-${einsatz!.id}`)).toBeVisible()
     await expect(playerPage.getByTestId(`player-progress-chart-${technik!.id}`)).toBeVisible()
+    await expect(playerPage.getByTestId(`player-progress-chart-${einsatz!.id}`)).toContainText(
+      'Ø Team 7.0 · Median 7.0',
+    )
+    await expect(playerPage.getByTestId(`player-progress-chart-${technik!.id}`)).toContainText(
+      'Ø Team 6.0 · Median 6.0',
+    )
 
     // Trainer sees the full ranking table on their dashboard.
     await trainerPage.goto(`/t/${teamSlug}/ranking`, { waitUntil: 'networkidle' })

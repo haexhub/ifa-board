@@ -31,6 +31,8 @@ const timeframe = useTimeframe(slug, seasonStart)
 const linkedPlayerId = ref<string | null>(null)
 const ranking = ref<TeamRanking | null>(null)
 const isLoading = ref(false)
+const loadError = ref<string | null>(null)
+let latestLoad = 0
 
 const loadLinkedPlayer = async () => {
   if (!teamId.value || !user.value) return
@@ -45,15 +47,22 @@ const loadLinkedPlayer = async () => {
 
 const load = async () => {
   if (!teamId.value) return
+  const loadId = ++latestLoad
   isLoading.value = true
+  loadError.value = null
   try {
-    ranking.value = await getTeamRanking(
+    const nextRanking = await getTeamRanking(
       teamId.value,
       timeframe.range.value.from,
       timeframe.range.value.to,
     )
+    if (loadId === latestLoad) ranking.value = nextRanking
+  } catch (err) {
+    if (loadId === latestLoad) {
+      loadError.value = err instanceof Error ? err.message : 'Konnte Rangliste nicht laden'
+    }
   } finally {
-    isLoading.value = false
+    if (loadId === latestLoad) isLoading.value = false
   }
 }
 
@@ -111,11 +120,7 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
           Mein Zeitverlauf
         </NuxtLink>
       </div>
-      <p
-        v-else-if="linkedPlayerId"
-        class="text-sm text-neutral-500"
-        data-testid="my-rank-missing"
-      >
+      <p v-else-if="linkedPlayerId" class="text-sm text-neutral-500" data-testid="my-rank-missing">
         Für dich sind im gewählten Zeitraum keine Punkte erfasst.
       </p>
       <p v-else class="text-sm text-neutral-500" data-testid="not-linked">
@@ -126,6 +131,7 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
     <section class="space-y-2" data-testid="top-three">
       <h2 class="text-lg font-semibold text-neutral-900">Top 3</h2>
       <p v-if="isLoading" class="text-sm text-neutral-500">Lade…</p>
+      <p v-else-if="loadError" class="text-sm text-red-700" role="alert">{{ loadError }}</p>
       <p v-else-if="topThree.length === 0" class="text-sm text-neutral-500">
         Noch keine Punkte im gewählten Zeitraum.
       </p>
@@ -175,7 +181,7 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
     </nav>
 
     <RankingTable
-      v-if="isTrainer"
+      v-if="isTrainer && !loadError"
       :ranking="ranking"
       :slug="slug"
       :link-players="true"

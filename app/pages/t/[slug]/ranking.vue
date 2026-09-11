@@ -28,21 +28,26 @@ const timeframe = useTimeframe(slug, seasonStart)
 const ranking = ref<TeamRanking | null>(null)
 const isLoading = ref(false)
 const loadError = ref<string | null>(null)
+let latestLoad = 0
 
 const load = async () => {
   if (!teamId.value) return
+  const loadId = ++latestLoad
   isLoading.value = true
   loadError.value = null
   try {
-    ranking.value = await getTeamRanking(
+    const nextRanking = await getTeamRanking(
       teamId.value,
       timeframe.range.value.from,
       timeframe.range.value.to,
     )
+    if (loadId === latestLoad) ranking.value = nextRanking
   } catch (err) {
-    loadError.value = err instanceof Error ? err.message : 'Konnte Rangliste nicht laden'
+    if (loadId === latestLoad) {
+      loadError.value = err instanceof Error ? err.message : 'Konnte Rangliste nicht laden'
+    }
   } finally {
-    isLoading.value = false
+    if (loadId === latestLoad) isLoading.value = false
   }
 }
 

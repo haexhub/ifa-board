@@ -2,14 +2,14 @@
 import { VisAxis, VisLine, VisScatter, VisXYContainer } from '@unovis/vue'
 import { computed } from 'vue'
 import type { ActiveCategory } from '~/composables/useCategories'
-import type { CategoryScoreRow } from '~/composables/usePlayerScores'
+import type { PlayerScoreWithTeamStats } from '~/composables/usePlayerScores'
 
 type SeriesPoint = { date: string; value: number }
 
 const props = defineProps<{
   categories: ActiveCategory[]
   timeSeries: Map<string, SeriesPoint[]>
-  scores: CategoryScoreRow[]
+  scores: PlayerScoreWithTeamStats[]
 }>()
 
 type ChartRow = {
@@ -20,7 +20,7 @@ type ChartRow = {
 }
 
 const scoresById = computed(() => {
-  const m = new Map<string, CategoryScoreRow>()
+  const m = new Map<string, PlayerScoreWithTeamStats>()
   for (const s of props.scores) m.set(s.category_id, s)
   return m
 })
@@ -28,8 +28,8 @@ const scoresById = computed(() => {
 const chartData = (categoryId: string): ChartRow[] => {
   const points = props.timeSeries.get(categoryId) ?? []
   const summary = scoresById.value.get(categoryId)
-  const avg = summary?.avg_value ?? null
-  const median = summary?.median_value ?? null
+  const avg = summary?.team_avg ?? null
+  const median = summary?.team_median ?? null
   return points.map((p) => ({
     ts: new Date(`${p.date}T00:00:00`).getTime(),
     player: p.value,
@@ -60,8 +60,8 @@ const isEmpty = (categoryId: string) => (props.timeSeries.get(categoryId) ?? [])
       <header class="flex items-baseline justify-between mb-2">
         <h3 class="font-semibold text-neutral-900">{{ c.name }}</h3>
         <p v-if="!isEmpty(c.id)" class="text-xs text-neutral-500">
-          Ø Team {{ scoresById.get(c.id)?.avg_value?.toFixed(1) ?? '—' }} · Median
-          {{ scoresById.get(c.id)?.median_value?.toFixed(1) ?? '—' }}
+          Ø Team {{ scoresById.get(c.id)?.team_avg?.toFixed(1) ?? '—' }} · Median
+          {{ scoresById.get(c.id)?.team_median?.toFixed(1) ?? '—' }}
         </p>
       </header>
       <p

@@ -17,6 +17,7 @@ const emit = defineEmits<{
 
 const localFrom = ref(props.customFrom ?? props.range.from)
 const localTo = ref(props.customTo ?? props.range.to)
+const customError = ref<string | null>(null)
 
 watch(
   () => [props.customFrom, props.customTo, props.range.from, props.range.to],
@@ -28,11 +29,20 @@ watch(
 
 const onPresetChange = (evt: Event) => {
   const v = (evt.target as HTMLSelectElement).value as TimeframePreset
+  customError.value = null
   emit('update:preset', v)
 }
 
 const applyCustom = () => {
-  if (!localFrom.value || !localTo.value) return
+  customError.value = null
+  if (!localFrom.value || !localTo.value) {
+    customError.value = 'Bitte einen vollständigen Zeitraum auswählen.'
+    return
+  }
+  if (localFrom.value > localTo.value) {
+    customError.value = 'Das Startdatum darf nicht nach dem Enddatum liegen.'
+    return
+  }
   emit('update:custom', { from: localFrom.value, to: localTo.value })
 }
 
@@ -76,8 +86,10 @@ const isCustom = computed(() => props.preset === 'custom')
       />
     </label>
 
-    <p v-if="!isCustom" class="text-xs text-neutral-500">
-      {{ range.from }} – {{ range.to }}
+    <p v-if="isCustom && customError" class="text-xs text-red-700" role="alert">
+      {{ customError }}
     </p>
+
+    <p v-if="!isCustom" class="text-xs text-neutral-500">{{ range.from }} – {{ range.to }}</p>
   </div>
 </template>
