@@ -76,11 +76,11 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Storage bucket
 
-- [X] T029 Migration `supabase/migrations/20260910123000_storage_photos.sql` — insert bucket `training-photos` (private); policies `tphoto_read_member`, `tphoto_write_trainer` reading `team_id` from `(storage.foldername(name))[1]`
+- [X] T029 Migration `supabase/migrations/20260910123000_storage_photos.sql` — insert private bucket `training-photos` with a 10 MB limit and the five supported image MIME types; policies `tphoto_read_member`, `tphoto_write_trainer` validate both team and training IDs from the path
 
 ### Ranking + public functions
 
-- [X] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); grants appropriate
+- [X] T030 Migration `supabase/migrations/20260910123500_functions.sql` — `get_team_ranking(uuid, date, date)`, `get_player_scores_by_category(uuid, uuid, date, date)`, and a placeholder `get_public_ranking(text, date, date)` (real body written in US5 migration); revoke default execution from `PUBLIC`, `anon`, and `service_role` for the authenticated-only functions, grant those only to `authenticated`, and grant the public function only to `authenticated` and `anon`
 - [X] T031 Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
 ### Auth / layouts / middlewares scaffolding
@@ -113,7 +113,7 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Implementation for User Story 0
 
-- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — validate the authenticated session, pass the verified user ID to one transactional RPC/database function, and atomically insert `teams.created_by` plus `memberships(trainer)`; separate REST inserts are prohibited; body `{name: string, slug?: string}`; returns `{slug}`
+- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — validate the authenticated session, pass the verified session user ID explicitly to one transactional RPC/database function restricted to `service_role`, and use that ID for both `teams.created_by` and `memberships.user_id`; separate REST inserts are prohibited; body `{name: string, slug?: string}`; returns `{slug}`
 - [ ] T045 [P] [US0] Server route `app/server/api/invitations/issue.post.ts` — trainer-only (verify via authenticated Supabase client + `is_trainer(team_id)`); body `{team_id, email, role}`; generate 32-char URL-safe token; insert `invitations`; call `supabase.auth.admin.inviteUserByEmail` with `redirectTo`=`<origin>/invite/<token>`
 - [ ] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token}`; validate not expired, not accepted, and exact session-email match; reject mismatches server-side; call one transactional RPC/database function that atomically inserts membership (on conflict do nothing) and sets `accepted_at`; no `force` flag or cross-email confirmation
 - [ ] T047 [P] [US0] Composable `app/composables/useTeams.ts` — `createTeam({name, slug})` (POST /api/teams/create), `myTeams()` (list memberships joined with teams)

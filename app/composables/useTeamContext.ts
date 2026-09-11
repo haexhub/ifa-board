@@ -1,36 +1,27 @@
 // T040: current team context (slug from URL) + list of user's memberships.
 
 import { computed } from 'vue'
-
-type Membership = {
-  team_id: string
-  role: 'trainer' | 'player'
-  teams: {
-    id: string
-    name: string
-    slug: string
-  } | null
-}
+import type { Database } from '~/types/database'
 
 export const useTeamContext = () => {
   const route = useRoute()
-  const client = useSupabaseClient()
+  const client = useSupabaseClient<Database>()
   const user = useSupabaseUser()
 
   const currentSlug = computed<string | null>(
     () => (route.params as { slug?: string }).slug ?? null,
   )
 
-  const { data: memberships, refresh } = useAsyncData<Membership[]>(
+  const { data: memberships, refresh } = useAsyncData(
     'my-memberships',
     async () => {
       if (!user.value) return []
-      const { data, error } = await client
+      const query = client
         .from('memberships')
         .select('team_id, role, teams (id, name, slug)')
-        .eq('user_id', user.value.id)
+      const { data, error } = await query.eq('user_id', user.value.id)
       if (error) throw error
-      return (data ?? []) as unknown as Membership[]
+      return data ?? []
     },
     { watch: [user] },
   )

@@ -40,7 +40,7 @@ create table public.invitations (
 comment on table public.invitations is 'Outstanding + accepted team invitations. Token-authenticated.';
 
 create unique index invitations_team_email_open_uniq
-  on public.invitations(team_id, email)
+  on public.invitations(team_id, lower(email))
   where accepted_at is null;
 create index invitations_email_open_idx
   on public.invitations(email)

@@ -178,7 +178,9 @@ research update.
   3. `insert into memberships(user_id, team_id, role)` with role `trainer`.
   Separate REST inserts are prohibited because they can leave a team without
   its first membership. A service-role client, if needed by the route, is
-  isolated from the browser session and receives only the verified user ID.
+  isolated from the browser session and receives only the verified user ID;
+  the RPC is executable only by `service_role`, never by `anon` or
+  `authenticated`.
 - **Rationale**: The membership insert cannot be done from the client
   because at that instant the caller has no `is_trainer(<new_team_id>)`
   membership yet. Doing this on the server, atomically, avoids

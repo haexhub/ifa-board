@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 const user = useSupabaseUser()
 const client = useSupabaseClient()
+const signOutError = ref<string | null>(null)
 
 const signOut = async () => {
-  await client.auth.signOut()
+  signOutError.value = null
+  const { error } = await client.auth.signOut()
+  if (error) {
+    signOutError.value = 'Abmelden fehlgeschlagen. Bitte versuche es erneut.'
+    return
+  }
   await navigateTo('/login')
 }
 </script>
@@ -22,6 +30,9 @@ const signOut = async () => {
           Abmelden
         </button>
       </div>
+      <p v-if="signOutError" class="px-4 pb-2 text-center text-sm text-red-700" role="alert">
+        {{ signOutError }}
+      </p>
     </header>
     <main class="mx-auto max-w-2xl px-4 py-8">
       <slot />

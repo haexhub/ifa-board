@@ -28,9 +28,10 @@ as $$
   select ac.id           as category_id,
          ac.name         as category_name,
          ac.sort_order,
-         coalesce(sum(pe.value), 0)::bigint          as sum_value,
-         avg(pe.value)                                as avg_value,
-         percentile_cont(0.5) within group (order by pe.value) as median_value
+         coalesce(sum(pe.value) filter (where t.id is not null), 0)::bigint as sum_value,
+         avg(pe.value) filter (where t.id is not null) as avg_value,
+         percentile_cont(0.5) within group (order by pe.value)
+           filter (where t.id is not null) as median_value
     from active_cats ac
     left join public.point_entries pe on pe.category_id = ac.id
       and pe.player_id = p_player
@@ -42,6 +43,8 @@ as $$
    order by ac.sort_order;
 $$;
 
+revoke all on function public.get_player_scores_by_category(uuid, uuid, date, date)
+  from public, anon, service_role;
 grant execute on function public.get_player_scores_by_category(uuid, uuid, date, date)
   to authenticated;
 
@@ -75,7 +78,7 @@ begin
            p.name,
            p.jersey_number,
            ac.id as category_id,
-           coalesce(sum(pe.value), 0)::bigint as sum_value
+           coalesce(sum(pe.value) filter (where t.id is not null), 0)::bigint as sum_value
       from public.players p
       cross join active_cats ac
       left join public.point_entries pe on pe.player_id = p.id and pe.category_id = ac.id
@@ -122,6 +125,8 @@ begin
 end;
 $$;
 
+revoke all on function public.get_team_ranking(uuid, date, date)
+  from public, anon, service_role;
 grant execute on function public.get_team_ranking(uuid, date, date) to authenticated;
 
 -- Placeholder public ranking function — real body written in US5 migration T094.
@@ -146,4 +151,6 @@ as $$
   );
 $$;
 
+revoke all on function public.get_public_ranking(text, date, date)
+  from public, service_role;
 grant execute on function public.get_public_ranking(text, date, date) to anon, authenticated;

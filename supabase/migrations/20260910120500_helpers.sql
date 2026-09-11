@@ -4,13 +4,14 @@ create or replace function public.is_member(p_team uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
+set search_path = ''
 as $$
   select exists (
     select 1
       from public.memberships
-      where team_id = p_team
-        and user_id = auth.uid()
+      where public.memberships.team_id = p_team
+        and public.memberships.user_id = auth.uid()
   );
 $$;
 
@@ -18,16 +19,22 @@ create or replace function public.is_trainer(p_team uuid)
 returns boolean
 language sql
 stable
-security invoker
+security definer
+set search_path = ''
 as $$
   select exists (
     select 1
       from public.memberships
-      where team_id = p_team
-        and user_id = auth.uid()
-        and role = 'trainer'
+      where public.memberships.team_id = p_team
+        and public.memberships.user_id = auth.uid()
+        and public.memberships.role = 'trainer'
   );
 $$;
+
+revoke all on function public.is_member(uuid) from public, anon, service_role;
+revoke all on function public.is_trainer(uuid) from public, anon, service_role;
+grant execute on function public.is_member(uuid), public.is_trainer(uuid)
+  to authenticated;
 
 comment on function public.is_member(uuid) is
   'RLS helper: is auth.uid() a member of the given team?';
@@ -62,7 +69,7 @@ as $$
       );
 $$;
 
-revoke all on function public.is_profile_visible(uuid) from public;
+revoke all on function public.is_profile_visible(uuid) from public, anon, service_role;
 grant execute on function public.is_profile_visible(uuid) to authenticated;
 
 alter table public.user_profiles enable row level security;
@@ -91,7 +98,7 @@ begin
 end;
 $$;
 
-revoke all on function public.sync_user_profile() from public;
+revoke all on function public.sync_user_profile() from public, anon, authenticated, service_role;
 
 create trigger on_auth_user_profile_sync
   after insert or update of email, raw_user_meta_data on auth.users

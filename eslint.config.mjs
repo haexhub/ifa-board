@@ -4,6 +4,17 @@ import tseslint from 'typescript-eslint'
 import vue from 'eslint-plugin-vue'
 import prettier from 'eslint-config-prettier'
 
+const nuxtGlobals = {
+  defineNuxtConfig: 'readonly',
+  defineNuxtRouteMiddleware: 'readonly',
+  navigateTo: 'readonly',
+  useAsyncData: 'readonly',
+  useRequestURL: 'readonly',
+  useRoute: 'readonly',
+  useSupabaseClient: 'readonly',
+  useSupabaseUser: 'readonly',
+}
+
 export default [
   {
     ignores: ['.output/**', '.nuxt/**', 'dist/**', 'node_modules/**', 'supabase/**', 'playwright-report/**', 'coverage/**', 'app/types/database.ts'],
@@ -13,6 +24,7 @@ export default [
   ...vue.configs['flat/recommended'],
   {
     languageOptions: {
+      globals: nuxtGlobals,
       parserOptions: {
         parser: tseslint.parser,
       },

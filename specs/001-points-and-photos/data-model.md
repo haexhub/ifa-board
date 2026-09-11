@@ -249,13 +249,15 @@ Written in migrations under `supabase/migrations/…_functions.sql`:
 
 - **Private** bucket.
 - Object keys are `<team_id>/<training_id>/<uuid>.<ext>`.
-- Read policy: `bucket_id = 'training-photos' AND
-  public.is_member(((storage.foldername(name))[1])::uuid) AND EXISTS
-  (SELECT 1 FROM public.trainings t WHERE t.id =
-  ((storage.foldername(name))[2])::uuid AND t.team_id =
-  ((storage.foldername(name))[1])::uuid AND (t.status = 'saved' OR
+- Read policy: `bucket_id = 'training-photos' AND EXISTS (SELECT 1 FROM
+  public.trainings t WHERE t.id::text = (storage.foldername(name))[2]
+  AND t.team_id::text = (storage.foldername(name))[1] AND
+  public.is_member(t.team_id) AND (t.status = 'saved' OR
   public.is_trainer(t.team_id)))`.
-- Insert/delete policy: same, but `is_trainer` instead of `is_member`.
+- Insert/update/delete policy: same training-ID and team-ID checks, but
+  `is_trainer(t.team_id)` is required.
+- Bucket `allowed_mime_types`: `image/jpeg`, `image/png`, `image/heic`,
+  `image/heif`, `image/webp`; `file_size_limit` is 10 MB.
 
 ## Sequence of migrations (execution order for `/speckit-tasks`)
 

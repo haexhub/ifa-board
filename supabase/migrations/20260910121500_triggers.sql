@@ -59,14 +59,19 @@ begin
       return old;
     end if;
   else
-    v_team_id := new.team_id;
-    if old.role = 'trainer' and new.role = 'trainer' then
+    if old.role <> 'trainer' then
       return new;
     end if;
-    if new.role = 'trainer' then
+    if old.role = 'trainer'
+       and new.role = 'trainer'
+       and old.team_id = new.team_id then
       return new;
     end if;
+    v_team_id := old.team_id;
   end if;
+
+  -- Serialize trainer removals/downgrades/moves per team.
+  perform 1 from public.teams where id = v_team_id for update;
 
   select count(*) into v_remaining
     from public.memberships
@@ -136,13 +141,65 @@ create trigger point_entries_team_consistency
   before insert or update on public.point_entries
   for each row execute function public.enforce_point_entry_team_consistency();
 
+-- Parent team IDs cannot change after point entries reference them. This
+-- prevents existing entries from becoming cross-team rows.
+create or replace function public.prevent_referenced_team_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.team_id = old.team_id then
+    return new;
+  end if;
+
+  if (tg_table_name = 'players' and exists (
+        select 1 from public.point_entries where player_id = old.id
+      ))
+     or (tg_table_name = 'point_categories' and exists (
+        select 1 from public.point_entries where category_id = old.id
+      ))
+     or (tg_table_name = 'trainings' and exists (
+        select 1 from public.point_entries where training_id = old.id
+      )) then
+    raise exception '% team_id cannot change while point entries reference it',
+      tg_table_name using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.prevent_referenced_team_change()
+  from public, anon, authenticated, service_role;
+
+create trigger players_team_id_consistency
+  before update of team_id on public.players
+  for each row execute function public.prevent_referenced_team_change();
+
+create trigger point_categories_team_id_consistency
+  before update of team_id on public.point_categories
+  for each row execute function public.prevent_referenced_team_change();
+
+create trigger trainings_team_id_consistency
+  before update of team_id on public.trainings
+  for each row execute function public.prevent_referenced_team_change();
+
 -- Enforce: cannot move a training to status='saved' without at least one photo
 create or replace function public.enforce_training_has_photo()
 returns trigger
 language plpgsql
 as $$
+declare
+  v_requires_photo boolean;
 begin
-  if new.status = 'saved' and (old.status is null or old.status <> 'saved') then
+  v_requires_photo := tg_op = 'INSERT';
+  if tg_op = 'UPDATE' then
+    v_requires_photo := old.status is distinct from 'saved';
+  end if;
+
+  if new.status = 'saved' and v_requires_photo then
     if not exists (
       select 1 from public.training_photos where training_id = new.id
     ) then
@@ -155,8 +212,48 @@ end;
 $$;
 
 create trigger trainings_photo_required
-  before update on public.trainings
+  before insert or update on public.trainings
   for each row execute function public.enforce_training_has_photo();
+
+-- A saved training must retain at least one photo.
+create or replace function public.enforce_saved_training_has_photo()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+  v_photo_count int;
+begin
+  if tg_op = 'DELETE'
+     or (tg_op = 'UPDATE' and old.training_id is distinct from new.training_id) then
+    select status into v_status
+      from public.trainings
+     where id = old.training_id;
+
+    if v_status = 'saved' then
+      select count(*) into v_photo_count
+        from public.training_photos
+       where training_id = old.training_id;
+
+      if v_photo_count <= 1 then
+        raise exception 'training % cannot lose its last photo while saved',
+          old.training_id using errcode = 'check_violation';
+      end if;
+    end if;
+  end if;
+
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+revoke all on function public.enforce_saved_training_has_photo()
+  from public, anon, authenticated, service_role;
+
+create trigger training_photos_required
+  before delete or update of training_id on public.training_photos
+  for each row execute function public.enforce_saved_training_has_photo();
 
 -- Enforce photo storage_path first segment matches training.team_id
 create or replace function public.enforce_photo_path_team()
@@ -166,13 +263,17 @@ as $$
 declare
   v_team uuid;
   v_prefix text;
+  v_training_prefix text;
 begin
   select team_id into v_team from public.trainings where id = new.training_id;
   if v_team is null then
     raise exception 'referenced training not found';
   end if;
   v_prefix := split_part(new.storage_path, '/', 1);
-  if v_prefix is null or v_prefix = '' or v_prefix <> v_team::text then
+  v_training_prefix := split_part(new.storage_path, '/', 2);
+  if v_prefix is null or v_prefix = '' or v_prefix <> v_team::text
+     or v_training_prefix is null or v_training_prefix = ''
+     or v_training_prefix <> new.training_id::text then
     raise exception 'photo storage_path % does not start with training team_id %',
       new.storage_path, v_team using errcode = 'check_violation';
   end if;
@@ -181,7 +282,7 @@ end;
 $$;
 
 create trigger training_photos_path_team_check
-  before insert on public.training_photos
+  before insert or update of training_id, storage_path on public.training_photos
   for each row execute function public.enforce_photo_path_team();
 
 -- Enforce: linked_user must have a player-role membership in same team
@@ -207,7 +308,7 @@ end;
 $$;
 
 create trigger players_linked_user_membership_check
-  before insert or update of linked_user_id on public.players
+  before insert or update of linked_user_id, team_id on public.players
   for each row execute function public.enforce_player_linked_user_membership();
 
 -- On team creation, seed team_settings
