@@ -179,20 +179,20 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 2
 
-- [ ] T073 [P] [US2] Playwright test `tests/e2e/player-flow.spec.ts` — dashboard rank + own progress chart in current team
-- [ ] T074 [P] [US2] Unit test `tests/unit/ranking.spec.ts` — golden-master seed asserts `get_team_ranking(team_id, from, to)` outputs the expected tie pattern (1, 2, 2, 4) and lexicographic order across categories
+- [X] T073 [P] [US2] Playwright test `tests/e2e/player-flow.spec.ts` — dashboard rank + own progress chart in current team
+- [X] T074 [P] [US2] Unit test `tests/unit/ranking.spec.ts` — golden-master seed asserts `get_team_ranking(team_id, from, to)` outputs the expected tie pattern (1, 2, 2, 4) and lexicographic order across categories
 
 ### Implementation for User Story 2
 
-- [ ] T075 [P] [US2] Composable `app/composables/useRanking.ts` — wraps `rpc('get_team_ranking', {p_team, p_from, p_to})`
-- [ ] T076 [P] [US2] Composable `app/composables/usePlayerScores.ts` — wraps `get_player_scores_by_category`; derives team avg / median per category over the same timeframe (skipping null point_entries)
-- [ ] T077 [P] [US2] Composable `app/composables/useTimeframe.ts` — presets `last-4-weeks | season | custom`, persisted in `localStorage` per team slug
-- [ ] T078 [P] [US2] Component `app/components/stats/TimeframePicker.vue` — shadcn `Select` + custom date range inputs
-- [ ] T079 [P] [US2] Component `app/components/stats/RankingTable.vue` — shadcn `Table` bound to `useRanking` output
-- [ ] T080 [US2] Component `app/components/stats/PlayerProgressChart.vue` — one Unovis line chart per active category; player series + team avg + team median dashed lines
-- [ ] T081 [US2] Page `app/pages/t/[slug]/dashboard.vue` — role-aware player dashboard: rank, top-3, timeframe picker
-- [ ] T082 [US2] Page `app/pages/t/[slug]/players/[id].vue` — player detail with `PlayerProgressChart` and basic info (name, jersey, position when set)
-- [ ] T083 [US2] Page `app/pages/t/[slug]/ranking.vue` — full team ranking view
+- [X] T075 [P] [US2] Composable `app/composables/useRanking.ts` — wraps `rpc('get_team_ranking', {p_team, p_from, p_to})`
+- [X] T076 [P] [US2] Composable `app/composables/usePlayerScores.ts` — wraps `get_player_scores_by_category`; derives team avg / median per category over the same timeframe (skipping null point_entries)
+- [X] T077 [P] [US2] Composable `app/composables/useTimeframe.ts` — presets `last-4-weeks | season | custom`, persisted in `localStorage` per team slug
+- [X] T078 [P] [US2] Component `app/components/stats/TimeframePicker.vue` — shadcn `Select` + custom date range inputs
+- [X] T079 [P] [US2] Component `app/components/stats/RankingTable.vue` — shadcn `Table` bound to `useRanking` output
+- [X] T080 [US2] Component `app/components/stats/PlayerProgressChart.vue` — one Unovis line chart per active category; player series + team avg + team median dashed lines
+- [X] T081 [US2] Page `app/pages/t/[slug]/dashboard.vue` — role-aware player dashboard: rank, top-3, timeframe picker
+- [X] T082 [US2] Page `app/pages/t/[slug]/players/[id].vue` — player detail with `PlayerProgressChart` and basic info (name, jersey, position when set)
+- [X] T083 [US2] Page `app/pages/t/[slug]/ranking.vue` — full team ranking view
 
 **Checkpoint**: US2 complete inside a team context.
 
