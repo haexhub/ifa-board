@@ -165,9 +165,9 @@ Indexes:
 
 Indexes: `create index trainings_team_date_idx on trainings(team_id, date desc);`
 
-Trigger `enforce_training_has_photo` (`before update`): if
-`new.status = 'saved'` and `old.status != 'saved'`, assert
-`exists (select 1 from training_photos where training_id = new.id)`.
+Photos are optional for a training in every state — no trigger guards the
+draft → saved transition against missing photos (dropped in
+`20260911130000_drop_photo_requirement.sql`).
 
 ## training_photos
 

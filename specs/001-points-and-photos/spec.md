@@ -103,14 +103,14 @@ Magic-Link an, sieht Team-Kontext "Test-Team" und hat player-Rechte.
 
 ---
 
-### User Story 1 - Trainer erfasst Punkte und Foto für ein Training (Priority: P1)
+### User Story 1 - Trainer erfasst Punkte für ein Training (Priority: P1)
 
 Ein Trainer kommt nach dem Training vom Platz, öffnet die App auf dem Handy,
 legt das heutige Training an (Datum vorbelegt), sieht den aktiven Kader in
-einer Liste, trägt pro Spieler in den aktiven Punktekategorien einen Wert ein,
-lädt mindestens ein Foto vom Training hoch und speichert. Das Training taucht
-danach in der Trainings-Historie auf und die vergebenen Punkte fließen in
-Rangliste und Verlaufsauswertungen ein.
+einer Liste, trägt pro Spieler in den aktiven Punktekategorien einen Wert ein
+und speichert. Optional kann er ein oder mehrere Fotos vom Training
+hochladen. Das Training taucht danach in der Trainings-Historie auf und die
+vergebenen Punkte fließen in Rangliste und Verlaufsauswertungen ein.
 
 **Why this priority**: Das ist der Kern-Loop, der überhaupt Daten in das System
 bringt. Ohne diesen Flow gibt es weder Rangliste noch Verlauf. Vor jedem
@@ -118,28 +118,25 @@ anderen Feature muss dieses funktionieren.
 
 **Independent Test**: Nach initialem Seed (Kader + eine Kategorie
 "Trainingsleistung" 0–5 + eine Trainer-Login) kann ein Trainer ohne weitere
-Vorbereitung ein Training anlegen, für alle Kaderspieler Werte eintragen, ein
-Foto hochladen, speichern und das gespeicherte Training in der Historie
-öffnen. Damit ist die Kern-Wertschöpfung demonstrierbar.
+Vorbereitung ein Training anlegen, für alle Kaderspieler Werte eintragen,
+speichern und das gespeicherte Training in der Historie öffnen. Damit ist
+die Kern-Wertschöpfung demonstrierbar.
 
 **Acceptance Scenarios**:
 
 1. **Given** der Trainer ist eingeloggt und mindestens ein Spieler ist im
    aktiven Kader und mindestens eine Punktekategorie ist aktiv, **When** der
    Trainer "Neues Training" wählt, das Datum bestätigt, für jeden Kaderspieler
-   einen gültigen Punktwert einträgt und mindestens ein Foto hochlädt und
-   speichert, **Then** wird das Training persistiert, alle Punkteinträge sind
-   dem Training zugeordnet, das Foto ist in der Trainingsgalerie sichtbar,
-   und das Training erscheint in der Trainings-Historie mit dem gewählten
-   Datum.
+   einen gültigen Punktwert einträgt und speichert, **Then** wird das Training
+   persistiert, alle Punkteinträge sind dem Training zugeordnet, und das
+   Training erscheint in der Trainings-Historie mit dem gewählten Datum.
 2. **Given** ein Training ist bereits gespeichert, **When** der Trainer das
    Training erneut öffnet, einen Punktwert korrigiert und speichert, **Then**
    wird der neue Wert übernommen und der alte Wert überschrieben; ein
    Audit-Feld (last_updated_at, last_updated_by) wird aktualisiert.
-3. **Given** der Trainer versucht ein Training zu speichern, ohne mindestens
-   ein Foto hochgeladen zu haben, **When** er auf "Speichern" tippt, **Then**
-   wird die Aktion blockiert und der Trainer sieht eine klare
-   Fehlermeldung: "Mindestens ein Foto ist Pflicht".
+3. **Given** der Trainer öffnet ein Training, **When** er ein oder mehrere
+   Fotos hochlädt, **Then** sind die Fotos in der Trainingsgalerie sichtbar;
+   Fotos sind für das Speichern nicht erforderlich.
 4. **Given** ein Trainer trägt für einen Spieler einen Wert außerhalb des in
    der Kategorie definierten Wertebereichs ein, **When** er speichern will,
    **Then** wird der einzelne Feldwert als ungültig markiert und das Training
