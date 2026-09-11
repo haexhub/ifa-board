@@ -123,9 +123,20 @@ as $$
 declare
   v_t uuid; v_p uuid; v_c uuid;
 begin
-  select team_id into v_t from public.trainings where id = new.training_id;
-  select team_id into v_p from public.players where id = new.player_id;
-  select team_id into v_c from public.point_categories where id = new.category_id;
+  -- Lock all referenced parents before validating their team IDs. Parent team
+  -- changes acquire the same row locks, so they cannot race this check.
+  select team_id into v_t
+    from public.trainings
+   where id = new.training_id
+   for update;
+  select team_id into v_p
+    from public.players
+   where id = new.player_id
+   for update;
+  select team_id into v_c
+    from public.point_categories
+   where id = new.category_id
+   for update;
   if v_t is null or v_p is null or v_c is null then
     raise exception 'referenced training/player/category not found';
   end if;
@@ -230,7 +241,8 @@ begin
      or (tg_op = 'UPDATE' and old.training_id is distinct from new.training_id) then
     select status into v_status
       from public.trainings
-     where id = old.training_id;
+     where id = old.training_id
+     for update;
 
     if v_status = 'saved' then
       select count(*) into v_photo_count
