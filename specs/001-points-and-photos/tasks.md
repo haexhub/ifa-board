@@ -15,6 +15,14 @@ cross-team SC-009), plus unit tests for ranking / slug / validators.
 **Organization**: Tasks are grouped by user story so each story can be
 implemented, tested, and delivered independently.
 
+**Progress (as of 2026-09-11)**: Setup (Phase 1) + Foundational (Phase 2)
++ US0 (Phase 3) done — 60/110 tasks, US0 E2E green in chromium and
+mobile-chrome. Server data layer switched to Drizzle (schema-as-code +
+`useUserDb`/`useAdminDb` with RLS-aware transactions) after US0 landed;
+browser still on `@nuxtjs/supabase`. Next up: **US1 (Phase 4, T061–T072)
+— trainer records point entries + at least one photo per training** (MVP
+anchor).
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
