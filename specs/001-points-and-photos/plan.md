@@ -19,9 +19,12 @@ that joins the requester's memberships against the row's `team_id`.
 
 **Language/Version**: TypeScript 5.6+, strict mode; Node.js 22 LTS.
 **Primary Dependencies**: Nuxt 3.13+, `@nuxtjs/supabase`, shadcn-vue,
-Tailwind CSS 3.4+, `@supabase/supabase-js` v2, `@vueuse/core`, `zod`
-(input validation), `@unovis/vue` + `@unovis/ts` (charts via
-shadcn-vue Chart component), `slug` (deterministic slug generation).
+Tailwind CSS 3.4+, `@supabase/supabase-js` v2 (browser + SSR reads,
+enforces RLS via PostgREST-JWT), `drizzle-orm` + `postgres` (server-side
+query builder), `drizzle-kit` (schema-as-code migrations),
+`@vueuse/core`, `zod` (input validation), `@unovis/vue` + `@unovis/ts`
+(charts via shadcn-vue Chart component), `slug` (deterministic slug
+generation).
 **Storage**: PostgreSQL 15 (Supabase-managed) with RLS on every table;
 Supabase Storage bucket `training-photos` keyed by
 `<team_id>/<training_id>/<uuid>.<ext>`.
@@ -49,8 +52,8 @@ Constitution v1.0.0 ([`.specify/memory/constitution.md`](../../.specify/memory/c
 
 | Principle | Gate | Status |
 |---|---|---|
-| **I. Simplicity First** (NON-NEGOTIABLE) | No abstractions beyond the current requirement; single Nuxt project; Supabase used directly; no state manager unless a real cross-view need appears. | ✅ Pass. Multi-tenant model justified by explicit user requirement; no extra service layer; direct `useSupabaseClient` composables; team context lives in URL + a lightweight `useTeamContext` composable, not in a global store. |
-| **II. Role-Based Access via Supabase RLS** (NON-NEGOTIABLE) | Every table has RLS + at least one policy; Storage bucket policies match; anonymous public ranking served only via a dedicated view/function. Cross-team access is denied by policy, not by app-layer filter. | ✅ Pass. Every team-scoped table joins `memberships` in its policies via `public.is_member(team_id)` and `public.is_trainer(team_id)` helpers. Storage bucket path is team-prefixed and policy asserts membership plus saved-training visibility. Anonymous ranking uses a narrowly projected `SECURITY DEFINER` function owned by a constrained read-only role. Detailed contract in [contracts/rls-policies.md](./contracts/rls-policies.md). |
+| **I. Simplicity First** (NON-NEGOTIABLE) | No abstractions beyond the current requirement; single Nuxt project; Supabase used directly; no state manager unless a real cross-view need appears. | ✅ Pass. Multi-tenant model justified by explicit user requirement; no extra service layer; direct `useSupabaseClient` composables in the browser; server routes use Drizzle for type-safe queries against the same DB; team context lives in URL + a lightweight `useTeamContext` composable, not in a global store. |
+| **II. Role-Based Access via Supabase RLS** (NON-NEGOTIABLE) | Every table has RLS + at least one policy; Storage bucket policies match; anonymous public ranking served only via a dedicated view/function. Cross-team access is denied by policy, not by app-layer filter. | ✅ Pass. Every team-scoped table joins `memberships` in its policies via `public.is_member(team_id)` and `public.is_trainer(team_id)` helpers. Storage bucket path is team-prefixed and policy asserts membership plus saved-training visibility. Anonymous ranking uses a narrowly projected `SECURITY DEFINER` function owned by a constrained read-only role. Detailed contract in [contracts/rls-policies.md](./contracts/rls-policies.md). Browser reads/writes go through the Supabase JS client so PostgREST forwards the caller's JWT; server-side Drizzle work uses `useUserDb` which opens a transaction and sets `role = authenticated` + `request.jwt.claims` so RLS still applies. Admin/RPC paths use `useAdminDb` explicitly. |
 | **III. Konfigurierbare Punktekategorien** | Categories live as data, editable per team without deploy. | ✅ Pass. `point_categories` is a table scoped by `team_id`; trainer-only CRUD UI. |
 | **IV. Mobile-First UX** | Mobile-first Tailwind, ≥44px touch targets, primary flow works on portrait mobile. | ✅ Pass. Design starts at 360×640; grid + team selector + magic-link flow verified on mobile emulation in Polish phase. |
 | **V. Type Safety End-to-End** | Nuxt TS strict; Supabase types generated and committed; no `any` without justification. | ✅ Pass. `pnpm gen:types` after every schema-affecting migration; committed under `app/types/database.ts`. |
@@ -59,7 +62,7 @@ Additional constraints:
 
 - **Tech Stack** (Nuxt + shadcn-vue + Supabase, German UI / English code): matched.
 - **SPA vs SSR**: SSR (Nuxt universal). Magic-link callback is handled cleanly by `@nuxtjs/supabase` in SSR mode.
-- **Migrations**: authored via `supabase migration new`, versioned under `supabase/migrations/`; every schema-affecting migration commits alongside regenerated `app/types/database.ts` and updated RLS policies.
+- **Migrations**: table DDL (columns, PKs, FKs, unique + performance indexes, check constraints) is authored in `db/schema/*.ts` and generated via `pnpm db:generate` (drizzle-kit) into `supabase/migrations/` with a `supabase`-style timestamp prefix so they interleave with the hand-written SQL migrations for RLS/triggers/functions/storage. Every schema-affecting change commits the generated SQL + updated drizzle meta snapshot + regenerated `app/types/database.ts`.
 
 **No violations. Complexity Tracking section intentionally empty.**
 
@@ -147,18 +150,28 @@ app/
 ├── plugins/
 │   └── supabase.client.ts        # only if bespoke wiring needed
 ├── server/
+│   ├── utils/
+│   │   └── db.ts                 # `useAdminDb` (superuser, RLS-bypass for admin ops) + `useUserDb(event, work)` (transaction that sets `role=authenticated` and `request.jwt.claims` so RLS still applies)
 │   └── api/
 │       ├── invitations/
-│       │   └── issue.post.ts     # trainer-only; uses service role to send magic-link email
+│       │   ├── issue.post.ts     # trainer-only; Drizzle insert + Supabase Auth admin for the email
+│       │   └── accept.post.ts    # calls `public.accept_invitation` RPC via Drizzle
 │       └── teams/
-│           └── create.post.ts    # generates a unique slug, creates team + first Trainer-Membership atomically
+│           └── create.post.ts    # unique-slug loop via Drizzle, then `public.create_team_with_trainer` RPC
 └── types/
-    └── database.ts               # generated by `pnpm gen:types`
+    └── database.ts               # generated by `pnpm gen:types` (Supabase client typings; browser-side only)
+
+db/
+└── schema/
+    └── index.ts                  # Drizzle schema — source of truth for table DDL, indexes, checks
 
 supabase/
 ├── config.toml
-├── migrations/                   # authored per phase, RLS + types committed together
+├── migrations/                   # SQL is the applied source of truth — mix of drizzle-kit-generated (tables) and hand-written (RLS/triggers/functions/storage) files, applied in filename order
+│   └── meta/                     # drizzle-kit journal + snapshots (committed)
 └── seed.sql                      # local dev only: sample teams and users for e2e
+
+drizzle.config.ts                 # drizzle-kit config: schema → `supabase/migrations/`
 
 tests/
 ├── e2e/
@@ -185,14 +198,30 @@ tsconfig.json
 ```
 
 **Structure Decision**: Single Nuxt project with a co-located
-`supabase/` schema folder — same as Round 1 — because Supabase remains
-the backend. Team-scoped routes live under `/t/[slug]/…`; onboarding
+`supabase/` schema folder — Supabase remains the backend (Postgres +
+Auth + Storage). Team-scoped routes live under `/t/[slug]/…`; onboarding
 routes live outside the team context so pre-membership users can access
-them. `server/api/` gains two thin routes — `/api/invitations/issue`
-and `/api/teams/create` — that use isolated server credentials only where
-needed (sending a magic-link email); team creation validates the browser
-session and delegates the team plus first Trainer-Membership insert to one
-transactional database function. Nothing else moves off Supabase.
+them.
+
+Two data-access surfaces exist and do NOT overlap:
+
+1. **Browser + composables** use `@nuxtjs/supabase` → PostgREST. Every
+   request forwards the caller's JWT so RLS enforces access at the DB
+   layer. No custom API route is written when the built-in client can
+   express the query.
+2. **Server routes** (`app/server/api/**`) use Drizzle against Postgres
+   directly. `useUserDb` opens a transaction, sets `role = authenticated`
+   and `request.jwt.claims`, and runs the caller's work inside it — RLS
+   applies exactly as it would for a PostgREST request. `useAdminDb` is
+   the escape hatch for admin ops (bypasses RLS; used only for the two
+   `SECURITY DEFINER` RPCs and for `auth.admin.inviteUserByEmail`).
+
+Table DDL is authored in `db/schema/*.ts` and generated to
+`supabase/migrations/` via `pnpm db:generate`. RLS policies, triggers,
+functions, and storage bucket wiring stay in hand-written SQL migrations
+so that Postgres-specific security primitives remain first-class. Both
+kinds of migration are applied in filename-timestamp order via
+`supabase db reset`.
 
 ## Complexity Tracking
 

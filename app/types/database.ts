@@ -70,7 +70,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invitations_team_id_fkey"
+            foreignKeyName: "invitations_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -99,7 +99,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "memberships_team_id_fkey"
+            foreignKeyName: "memberships_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -152,7 +152,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "players_team_id_fkey"
+            foreignKeyName: "players_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -202,7 +202,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "point_categories_team_id_fkey"
+            foreignKeyName: "point_categories_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -246,21 +246,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "point_entries_category_id_fkey"
+            foreignKeyName: "point_entries_category_id_point_categories_id_fk"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "point_categories"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "point_entries_player_id_fkey"
+            foreignKeyName: "point_entries_player_id_players_id_fk"
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "point_entries_training_id_fkey"
+            foreignKeyName: "point_entries_training_id_trainings_id_fk"
             columns: ["training_id"]
             isOneToOne: false
             referencedRelation: "trainings"
@@ -289,7 +289,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "team_settings_team_id_fkey"
+            foreignKeyName: "team_settings_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: true
             referencedRelation: "teams"
@@ -357,7 +357,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "training_photos_training_id_fkey"
+            foreignKeyName: "training_photos_training_id_trainings_id_fk"
             columns: ["training_id"]
             isOneToOne: false
             referencedRelation: "trainings"
@@ -404,7 +404,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "trainings_team_id_fkey"
+            foreignKeyName: "trainings_team_id_teams_id_fk"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -432,6 +432,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { p_token: string; p_user_email: string; p_user_id: string }
+        Returns: {
+          already_accepted: boolean
+          slug: string
+        }[]
+      }
+      create_team_with_trainer: {
+        Args: { p_name: string; p_slug: string; p_user_id: string }
+        Returns: {
+          id: string
+          slug: string
+        }[]
+      }
       get_player_scores_by_category: {
         Args: { p_from: string; p_player: string; p_team: string; p_to: string }
         Returns: {
@@ -451,6 +465,7 @@ export type Database = {
         Args: { p_from: string; p_team: string; p_to: string }
         Returns: Json
       }
+      has_pending_invitation: { Args: { p_team: string }; Returns: boolean }
       is_member: { Args: { p_team: string }; Returns: boolean }
       is_profile_visible: { Args: { p_profile: string }; Returns: boolean }
       is_trainer: { Args: { p_team: string }; Returns: boolean }

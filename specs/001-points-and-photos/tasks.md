@@ -108,28 +108,28 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 0
 
-- [ ] T042 [P] [US0] Playwright test `tests/e2e/onboarding.spec.ts` — full US0 acceptance scenarios 1–5 (magic-link signup, team creation, invite issuance, invitation acceptance, last-trainer guard)
-- [ ] T043 [P] [US0] Unit test `tests/unit/slug.spec.ts` — golden-master for the `slug()` helper: unicode → ASCII, collisions → suffix `-2`, `-3`, stability of alpha-numeric edge cases
+- [X] T042 [P] [US0] Playwright test `tests/e2e/onboarding.spec.ts` — full US0 acceptance scenarios 1–5 (magic-link signup, team creation, invite issuance, invitation acceptance, last-trainer guard)
+- [X] T043 [P] [US0] Unit test `tests/unit/slug.spec.ts` — golden-master for the `slug()` helper: unicode → ASCII, collisions → suffix `-2`, `-3`, stability of alpha-numeric edge cases
 
 ### Implementation for User Story 0
 
-- [ ] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — validate the authenticated session, pass the verified session user ID explicitly to one transactional RPC/database function restricted to `service_role`, and use that ID for both `teams.created_by` and `memberships.user_id`; separate REST inserts are prohibited; body `{name: string, slug?: string}`; returns `{slug}`
-- [ ] T045 [P] [US0] Server route `app/server/api/invitations/issue.post.ts` — trainer-only (verify via authenticated Supabase client + `is_trainer(team_id)`); body `{team_id, email, role}`; generate 32-char URL-safe token; insert `invitations`; call `supabase.auth.admin.inviteUserByEmail` with `redirectTo`=`<origin>/invite/<token>`
-- [ ] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token}`; validate not expired, not accepted, and exact session-email match; reject mismatches server-side; call one transactional RPC/database function that atomically inserts membership (on conflict do nothing) and sets `accepted_at`; no `force` flag or cross-email confirmation
-- [ ] T047 [P] [US0] Composable `app/composables/useTeams.ts` — `createTeam({name, slug})` (POST /api/teams/create), `myTeams()` (list memberships joined with teams)
-- [ ] T048 [P] [US0] Composable `app/composables/useInvitations.ts` — `issue({team_id, email, role})`, `listOpenByTeam(team_id)`, `listMineByEmail()`, `revoke(id)`, `accept(token)`
-- [ ] T049 [P] [US0] Component `app/components/auth/LoginMagicLink.vue` — single email input; submit → `useAuth.signInWithMagicLink`; shows "Prüfe deine E-Mails" success state
-- [ ] T050 [P] [US0] Component `app/components/auth/TeamCreateForm.vue` — zod-validated (name required, optional slug); submit → `useTeams.createTeam`; on success navigate `/t/<slug>`
-- [ ] T051 [P] [US0] Component `app/components/auth/InvitationAcceptCard.vue` — shows team name + offered role + expiry; "Annehmen" button → `useInvitations.accept`; handles rejected email mismatches with a sign-in-as-invited-email prompt
-- [ ] T052 [P] [US0] Component `app/components/team/InviteForm.vue` — zod-validated (email + role); submit → `useInvitations.issue`
-- [ ] T053 [P] [US0] Component `app/components/team/InviteList.vue` — reads open invitations for the current team; "Widerrufen" per row
-- [ ] T054 [P] [US0] Component `app/components/team/MembershipTable.vue` — reads memberships for the current team; role dropdown per row (trainer-only); "Entfernen" per row; error toasts surface the last-trainer trigger error
-- [ ] T055 [P] [US0] Component `app/components/team/TeamSwitcher.vue` — dropdown of `useTeamContext.memberships`; selecting one navigates `/t/<slug>/`
-- [ ] T056 [US0] Page `app/pages/login.vue` — renders `LoginMagicLink`
-- [ ] T057 [US0] Page `app/pages/callback.vue` — reads Supabase auth callback; after session, calls `useTeams.myTeams()` and redirects (to `/start`, `/t/<slug>`, or the `redirect` query param)
-- [ ] T058 [US0] Page `app/pages/start.vue` — layout `onboarding`; renders `TeamCreateForm` + list of open invitations for `auth.email` (via `useInvitations.listMineByEmail`)
-- [ ] T059 [US0] Page `app/pages/invite/[token].vue` — either preview `InvitationAcceptCard` or (if unauthenticated) prompt for email + `signInWithMagicLink` with `redirect` back to same page
-- [ ] T060 [US0] Page `app/pages/t/[slug]/team/members.vue` — trainer-only; renders `MembershipTable` + `InviteList` + `InviteForm`
+- [X] T044 [P] [US0] Server route `app/server/api/teams/create.post.ts` — validate the authenticated session, pass the verified session user ID explicitly to one transactional RPC/database function restricted to `service_role`, and use that ID for both `teams.created_by` and `memberships.user_id`; separate REST inserts are prohibited; body `{name: string, slug?: string}`; returns `{slug}`
+- [X] T045 [P] [US0] Server route `app/server/api/invitations/issue.post.ts` — trainer-only (verify via authenticated Supabase client + `is_trainer(team_id)`); body `{team_id, email, role}`; generate 32-char URL-safe token; insert `invitations`; call `supabase.auth.admin.inviteUserByEmail` with `redirectTo`=`<origin>/invite/<token>`
+- [X] T046 [P] [US0] Server route `app/server/api/invitations/accept.post.ts` — body `{token}`; validate not expired, not accepted, and exact session-email match; reject mismatches server-side; call one transactional RPC/database function that atomically inserts membership (on conflict do nothing) and sets `accepted_at`; no `force` flag or cross-email confirmation
+- [X] T047 [P] [US0] Composable `app/composables/useTeams.ts` — `createTeam({name, slug})` (POST /api/teams/create), `myTeams()` (list memberships joined with teams)
+- [X] T048 [P] [US0] Composable `app/composables/useInvitations.ts` — `issue({team_id, email, role})`, `listOpenByTeam(team_id)`, `listMineByEmail()`, `revoke(id)`, `accept(token)`
+- [X] T049 [P] [US0] Component `app/components/auth/LoginMagicLink.vue` — single email input; submit → `useAuth.signInWithMagicLink`; shows "Prüfe deine E-Mails" success state
+- [X] T050 [P] [US0] Component `app/components/auth/TeamCreateForm.vue` — zod-validated (name required, optional slug); submit → `useTeams.createTeam`; on success navigate `/t/<slug>`
+- [X] T051 [P] [US0] Component `app/components/auth/InvitationAcceptCard.vue` — shows team name + offered role + expiry; "Annehmen" button → `useInvitations.accept`; handles rejected email mismatches with a sign-in-as-invited-email prompt
+- [X] T052 [P] [US0] Component `app/components/team/InviteForm.vue` — zod-validated (email + role); submit → `useInvitations.issue`
+- [X] T053 [P] [US0] Component `app/components/team/InviteList.vue` — reads open invitations for the current team; "Widerrufen" per row
+- [X] T054 [P] [US0] Component `app/components/team/MembershipTable.vue` — reads memberships for the current team; role dropdown per row (trainer-only); "Entfernen" per row; error toasts surface the last-trainer trigger error
+- [X] T055 [P] [US0] Component `app/components/team/TeamSwitcher.vue` — dropdown of `useTeamContext.memberships`; selecting one navigates `/t/<slug>/`
+- [X] T056 [US0] Page `app/pages/login.vue` — renders `LoginMagicLink`
+- [X] T057 [US0] Page `app/pages/callback.vue` — reads Supabase auth callback; after session, calls `useTeams.myTeams()` and redirects (to `/start`, `/t/<slug>`, or the `redirect` query param)
+- [X] T058 [US0] Page `app/pages/start.vue` — layout `onboarding`; renders `TeamCreateForm` + list of open invitations for `auth.email` (via `useInvitations.listMineByEmail`)
+- [X] T059 [US0] Page `app/pages/invite/[token].vue` — either preview `InvitationAcceptCard` or (if unauthenticated) prompt for email + `signInWithMagicLink` with `redirect` back to same page
+- [X] T060 [US0] Page `app/pages/t/[slug]/team/members.vue` — trainer-only; renders `MembershipTable` + `InviteList` + `InviteForm`
 
 **Checkpoint**: US0 works end-to-end — signup, team-founding, invitation issuance, invitation acceptance, membership management. All other stories can now build on the assumption of a valid team context.
 
