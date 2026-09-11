@@ -151,21 +151,21 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 1
 
-- [ ] T061 [P] [US1] Playwright test `tests/e2e/trainer-flow.spec.ts` — full US1 acceptance scenarios inside a team context
+- [X] T061 [P] [US1] Playwright test `tests/e2e/trainer-flow.spec.ts` — full US1 acceptance scenarios inside a team context
 
 ### Implementation for User Story 1
 
-- [ ] T062 [P] [US1] Composable `app/composables/usePlayers.ts` — `listActive(team_id)` returning active players ordered by `jersey_number nulls last, name`
-- [ ] T063 [P] [US1] Composable `app/composables/useCategories.ts` — `listActive(team_id)` returning active categories ordered by `sort_order`
-- [ ] T064 [P] [US1] Composable `app/composables/useTrainings.ts` — `createDraft(team_id, date, title?, note?)`, `updateEntry({training_id, player_id, category_id, value})`, `save(training_id)`, `list(team_id)`, `get(id)`
-- [ ] T065 [US1] Composable `app/composables/useTrainingPhotos.ts` — `upload(training_id, team_id, file)` (validates MIME + size, uploads to `training-photos/<team_id>/<training_id>/<uuid>.<ext>`), `list(training_id)` returning signed URLs (600 s TTL)
-- [ ] T066 [P] [US1] Component `app/components/trainings/TrainingPointGrid.vue` — sticky-header table, rows=players, cols=categories, `input type="number"` with per-category `min/max`, auto-save on blur; ≥44px min-height per row
-- [ ] T067 [P] [US1] Component `app/components/trainings/TrainingPhotoUpload.vue` — multi-file picker; per-file progress + error
-- [ ] T068 [P] [US1] Component `app/components/trainings/ConsentWarningBanner.vue` — red shadcn `Alert` listing active players without `photo_consent`
-- [ ] T069 [US1] Page `app/pages/t/[slug]/trainings/new.vue` — trainer-only; creates a draft on mount, renders grid + uploader + banner; "Speichern" disabled until ≥1 photo; on save transitions to `saved` and navigates to `[id].vue`
-- [ ] T070 [US1] Page `app/pages/t/[slug]/trainings/[id].vue` — trainer sees editor; player sees read-only summary; shows `last_updated_by/at`
-- [ ] T071 [US1] Page `app/pages/t/[slug]/trainings/index.vue` — chronological list; trainer sees drafts + saved; player sees only saved
-- [ ] T072 [P] [US1] Unit test `tests/unit/validators.spec.ts` — zod schemas for point-value range, photo (MIME + size), date (no future)
+- [X] T062 [P] [US1] Composable `app/composables/usePlayers.ts` — `listActive(team_id)` returning active players ordered by `jersey_number nulls last, name`
+- [X] T063 [P] [US1] Composable `app/composables/useCategories.ts` — `listActive(team_id)` returning active categories ordered by `sort_order`
+- [X] T064 [P] [US1] Composable `app/composables/useTrainings.ts` — `createDraft(team_id, date, title?, note?)`, `updateEntry({training_id, player_id, category_id, value})`, `save(training_id)`, `list(team_id)`, `get(id)`
+- [X] T065 [US1] Composable `app/composables/useTrainingPhotos.ts` — `upload(training_id, team_id, file)` (validates MIME + size, uploads to `training-photos/<team_id>/<training_id>/<uuid>.<ext>`), `list(training_id)` returning signed URLs (600 s TTL)
+- [X] T066 [P] [US1] Component `app/components/trainings/TrainingPointGrid.vue` — sticky-header table, rows=players, cols=categories, `input type="number"` with per-category `min/max`, auto-save on blur; ≥44px min-height per row
+- [X] T067 [P] [US1] Component `app/components/trainings/TrainingPhotoUpload.vue` — multi-file picker; per-file progress + error
+- [X] T068 [P] [US1] Component `app/components/trainings/ConsentWarningBanner.vue` — red shadcn `Alert` listing active players without `photo_consent`
+- [X] T069 [US1] Page `app/pages/t/[slug]/trainings/new.vue` — trainer-only; creates a draft on mount, renders grid + uploader + banner; "Speichern" disabled until ≥1 photo; on save transitions to `saved` and navigates to `[id].vue`
+- [X] T070 [US1] Page `app/pages/t/[slug]/trainings/[id].vue` — trainer sees editor; player sees read-only summary; shows `last_updated_by/at`
+- [X] T071 [US1] Page `app/pages/t/[slug]/trainings/index.vue` — chronological list; trainer sees drafts + saved; player sees only saved
+- [X] T072 [P] [US1] Unit test `tests/unit/validators.spec.ts` — zod schemas for point-value range, photo (MIME + size), date (no future)
 
 **Checkpoint**: MVP loop closed inside a team context.
 

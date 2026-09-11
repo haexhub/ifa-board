@@ -1,0 +1,76 @@
+import { z } from 'zod'
+
+export const PHOTO_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/heif',
+  'image/webp',
+] as const
+
+export const PHOTO_MAX_BYTES = 10 * 1024 * 1024
+
+export type PhotoMime = (typeof PHOTO_MIME_TYPES)[number]
+
+export const pointValueSchema = (min: number, max: number) =>
+  z
+    .number({ invalid_type_error: 'Bitte eine Zahl eingeben' })
+    .int('Nur ganze Zahlen')
+    .min(min, `Mindestens ${min}`)
+    .max(max, `Höchstens ${max}`)
+
+export const photoFileSchema = z
+  .object({
+    type: z.string(),
+    size: z.number().int().nonnegative(),
+    name: z.string().optional(),
+  })
+  .superRefine((file, ctx) => {
+    if (!(PHOTO_MIME_TYPES as readonly string[]).includes(file.type)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Nicht unterstütztes Bildformat',
+        path: ['type'],
+      })
+    }
+    if (file.size <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Datei ist leer',
+        path: ['size'],
+      })
+    }
+    if (file.size > PHOTO_MAX_BYTES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Datei größer als 10 MB',
+        path: ['size'],
+      })
+    }
+  })
+
+export const trainingDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum im Format YYYY-MM-DD')
+  .refine((value) => {
+    const today = new Date()
+    const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    return value <= isoToday
+  }, 'Datum darf nicht in der Zukunft liegen')
+
+export const extensionForMime = (mime: string): string => {
+  switch (mime) {
+    case 'image/jpeg':
+      return 'jpg'
+    case 'image/png':
+      return 'png'
+    case 'image/heic':
+      return 'heic'
+    case 'image/heif':
+      return 'heif'
+    case 'image/webp':
+      return 'webp'
+    default:
+      return 'bin'
+  }
+}

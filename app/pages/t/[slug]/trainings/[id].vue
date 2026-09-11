@@ -1,0 +1,222 @@
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
+import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
+import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
+import { useCategories, type ActiveCategory } from '~/composables/useCategories'
+import { usePlayers, type ActivePlayer } from '~/composables/usePlayers'
+import {
+  useTrainings,
+  type PointEntryRow,
+  type TrainingRow,
+} from '~/composables/useTrainings'
+import {
+  useTrainingPhotos,
+  type TrainingPhotoView,
+} from '~/composables/useTrainingPhotos'
+
+definePageMeta({
+  middleware: ['team-context'],
+})
+
+const route = useRoute()
+const trainingId = String(route.params.id)
+const { currentTeam, isTrainer } = useTeamContext()
+const teamId = computed(() => currentTeam.value?.id ?? '')
+const slug = computed(() => currentTeam.value?.slug ?? '')
+
+const { get, listEntries, save } = useTrainings()
+const { listActive: listPlayers } = usePlayers()
+const { listActive: listCategories } = useCategories()
+const { list: listPhotos } = useTrainingPhotos()
+
+const training = ref<TrainingRow | null>(null)
+const players = ref<ActivePlayer[]>([])
+const categories = ref<ActiveCategory[]>([])
+const entries = ref<PointEntryRow[]>([])
+const photos = ref<TrainingPhotoView[]>([])
+const isSaving = ref(false)
+const saveError = ref<string | null>(null)
+
+const canSave = computed(
+  () => training.value?.status === 'draft' && photos.value.length > 0 && !isSaving.value,
+)
+
+const loadPhotos = async () => {
+  photos.value = await listPhotos(trainingId)
+}
+
+const load = async () => {
+  if (!teamId.value) return
+  const [t, ps, cs, es] = await Promise.all([
+    get(trainingId),
+    listPlayers(teamId.value),
+    listCategories(teamId.value),
+    listEntries(trainingId),
+  ])
+  training.value = t
+  players.value = ps
+  categories.value = cs
+  entries.value = es
+  await loadPhotos()
+}
+
+await load()
+
+const initialEntries = computed(() =>
+  entries.value.map((e) => ({
+    player_id: e.player_id,
+    category_id: e.category_id,
+    value: e.value,
+  })),
+)
+
+const entryByCell = computed(() => {
+  const m = new Map<string, PointEntryRow>()
+  for (const e of entries.value) m.set(`${e.player_id}:${e.category_id}`, e)
+  return m
+})
+
+const cellValue = (playerId: string, categoryId: string) =>
+  entryByCell.value.get(`${playerId}:${categoryId}`)?.value ?? null
+
+const onSave = async () => {
+  if (!training.value) return
+  saveError.value = null
+  isSaving.value = true
+  try {
+    training.value = await save(training.value.id)
+  } catch (err) {
+    saveError.value = err instanceof Error ? err.message : 'Speichern fehlgeschlagen'
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const statusLabel = computed(() =>
+  training.value?.status === 'saved' ? 'Gespeichert' : 'Entwurf',
+)
+</script>
+
+<template>
+  <section v-if="training" class="space-y-6" data-testid="training-detail-page">
+    <header class="space-y-1">
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl font-semibold text-neutral-900">
+          {{ training.title || `Training ${training.date}` }}
+        </h1>
+        <span
+          class="text-xs px-2 py-0.5 rounded-full border"
+          :class="
+            training.status === 'saved'
+              ? 'border-green-300 bg-green-50 text-green-800'
+              : 'border-neutral-300 bg-neutral-100 text-neutral-700'
+          "
+          data-testid="training-status-badge"
+        >
+          {{ statusLabel }}
+        </span>
+      </div>
+      <p class="text-sm text-neutral-600">
+        Datum {{ training.date }} · Zuletzt aktualisiert
+        {{ new Date(training.last_updated_at).toLocaleString('de-DE') }}
+      </p>
+    </header>
+
+    <template v-if="isTrainer">
+      <ConsentWarningBanner :players="players" />
+
+      <TrainingPointGrid
+        v-if="players.length && categories.length"
+        :training-id="training.id"
+        :players="players"
+        :categories="categories"
+        :initial-entries="initialEntries"
+      />
+
+      <TrainingPhotoUpload
+        v-if="teamId"
+        :training-id="training.id"
+        :team-id="teamId"
+        @uploaded="loadPhotos"
+      />
+
+      <div v-if="training.status === 'draft'" class="flex items-center gap-3">
+        <button
+          type="button"
+          class="min-h-touch px-4 rounded bg-neutral-900 text-white text-sm font-semibold disabled:opacity-40"
+          :disabled="!canSave"
+          data-testid="training-save-button"
+          @click="onSave"
+        >
+          {{ isSaving ? 'Speichere…' : 'Speichern' }}
+        </button>
+        <p v-if="photos.length === 0" class="text-sm text-neutral-600">
+          Mindestens 1 Foto ist erforderlich.
+        </p>
+      </div>
+      <p v-if="saveError" class="text-sm text-red-700" role="alert">{{ saveError }}</p>
+    </template>
+
+    <template v-else>
+      <div class="overflow-x-auto rounded border border-neutral-200 bg-white">
+        <table class="w-full text-sm border-collapse" data-testid="training-readonly-grid">
+          <thead class="bg-neutral-100">
+            <tr>
+              <th class="border-b border-r border-neutral-200 px-3 py-2 text-left">
+                Spieler:in
+              </th>
+              <th
+                v-for="c in categories"
+                :key="c.id"
+                class="border-b border-neutral-200 px-3 py-2 text-left"
+              >
+                {{ c.name }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="p in players" :key="p.id">
+              <th class="border-b border-r border-neutral-200 px-3 py-2 text-left font-medium">
+                {{ p.jersey_number !== null ? `#${p.jersey_number} ` : '' }}{{ p.name }}
+              </th>
+              <td
+                v-for="c in categories"
+                :key="c.id"
+                class="border-b border-neutral-200 px-3 py-2 text-right"
+              >
+                {{ cellValue(p.id, c.id) ?? '—' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="photos.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <a
+          v-for="p in photos"
+          :key="p.id"
+          :href="p.signed_url"
+          target="_blank"
+          rel="noopener"
+          class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
+        >
+          <img
+            v-if="p.signed_url"
+            :src="p.signed_url"
+            :alt="`Foto ${p.id}`"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </a>
+      </div>
+    </template>
+
+    <NuxtLink
+      :to="`/t/${slug}/trainings`"
+      class="inline-block text-sm text-neutral-600 underline"
+    >
+      ← Zur Trainings-Liste
+    </NuxtLink>
+  </section>
+  <p v-else class="text-neutral-500">Training nicht gefunden.</p>
+</template>
