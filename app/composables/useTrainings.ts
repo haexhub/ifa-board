@@ -39,6 +39,18 @@ export type UpdateEntryInput = {
   value: number
 }
 
+export type DeleteEntryInput = {
+  training_id: string
+  player_id: string
+  category_id: string
+}
+
+export type SaveTrainingInput = {
+  date?: string
+  title?: string | null
+  note?: string | null
+}
+
 export const useTrainings = () => {
   const client = useSupabaseClient<Database>()
   const user = useSupabaseUser()
@@ -83,11 +95,26 @@ export const useTrainings = () => {
     return data as PointEntryRow
   }
 
-  const save = async (training_id: string): Promise<TrainingRow> => {
+  const deleteEntry = async (input: DeleteEntryInput): Promise<void> => {
+    if (!user.value) throw new Error('Not authenticated')
+    const { error } = await client
+      .from('point_entries')
+      .delete()
+      .eq('training_id', input.training_id)
+      .eq('player_id', input.player_id)
+      .eq('category_id', input.category_id)
+    if (error) throw error
+  }
+
+  const save = async (training_id: string, input: SaveTrainingInput = {}): Promise<TrainingRow> => {
     if (!user.value) throw new Error('Not authenticated')
     const { data, error } = await client
       .from('trainings')
-      .update({ status: 'saved', last_updated_by: user.value.id })
+      .update({
+        status: 'saved',
+        last_updated_by: user.value.id,
+        ...input,
+      })
       .eq('id', training_id)
       .select('*')
       .single()
@@ -107,11 +134,7 @@ export const useTrainings = () => {
   }
 
   const get = async (id: string): Promise<TrainingRow | null> => {
-    const { data, error } = await client
-      .from('trainings')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle()
+    const { data, error } = await client.from('trainings').select('*').eq('id', id).maybeSingle()
     if (error) throw error
     return (data as TrainingRow) ?? null
   }
@@ -125,5 +148,5 @@ export const useTrainings = () => {
     return (data ?? []) as PointEntryRow[]
   }
 
-  return { createDraft, updateEntry, save, list, get, listEntries }
+  return { createDraft, updateEntry, deleteEntry, save, list, get, listEntries }
 }

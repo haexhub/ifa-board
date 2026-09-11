@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
 import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
@@ -27,29 +27,67 @@ const players = ref<ActivePlayer[]>([])
 const categories = ref<ActiveCategory[]>([])
 const photoCount = ref(0)
 const saveError = ref<string | null>(null)
+const draftError = ref<string | null>(null)
 const isSaving = ref(false)
+const isCreatingDraft = ref(false)
 const title = ref('')
 const date = ref(isoToday)
 
 const uploader = ref<InstanceType<typeof TrainingPhotoUpload> | null>(null)
 
-const canSave = computed(
-  () => !!training.value && photoCount.value > 0 && !isSaving.value,
+const canSave = computed(() => !!training.value && photoCount.value > 0 && !isSaving.value)
+
+const {
+  data: initialData,
+  pending: isInitializing,
+  error: initError,
+} = await useAsyncData(
+  'new-training-page-data',
+  async () => {
+    if (!teamId.value) return { players: [], categories: [] }
+    const [ps, cs] = await Promise.all([listPlayers(teamId.value), listCategories(teamId.value)])
+    return { players: ps, categories: cs }
+  },
+  { watch: [teamId], server: false },
 )
 
-const init = async () => {
-  if (!teamId.value) return
-  const [ps, cs, draft] = await Promise.all([
-    listPlayers(teamId.value),
-    listCategories(teamId.value),
-    createDraft({ team_id: teamId.value, date: date.value }),
-  ])
-  players.value = ps
-  categories.value = cs
-  training.value = draft
+watch(
+  initialData,
+  (data) => {
+    players.value = data?.players ?? []
+    categories.value = data?.categories ?? []
+  },
+  { immediate: true },
+)
+
+const createClientDraft = async () => {
+  if (!teamId.value || training.value || isCreatingDraft.value) return
+  isCreatingDraft.value = true
+  draftError.value = null
+  try {
+    training.value = await createDraft({
+      team_id: teamId.value,
+      date: date.value,
+      title: title.value || null,
+    })
+  } catch (err) {
+    draftError.value = err instanceof Error ? err.message : 'Training konnte nicht angelegt werden'
+  } finally {
+    isCreatingDraft.value = false
+  }
 }
 
-await init()
+onMounted(() => {
+  void createClientDraft()
+})
+
+watch(
+  teamId,
+  () => {
+    if (import.meta.client) void createClientDraft()
+  },
+  { flush: 'post' },
+)
 
 const onPhotoUploaded = () => {
   const count = uploader.value?.photos?.length ?? 0
@@ -61,7 +99,10 @@ const onSave = async () => {
   saveError.value = null
   isSaving.value = true
   try {
-    await save(training.value.id)
+    await save(training.value.id, {
+      date: date.value,
+      title: title.value.trim() || null,
+    })
     await navigateTo(`/t/${slug.value}/trainings/${training.value.id}`)
   } catch (err) {
     saveError.value = err instanceof Error ? err.message : 'Speichern fehlgeschlagen'
@@ -77,6 +118,13 @@ const onSave = async () => {
       <h1 class="text-2xl font-semibold text-neutral-900">Neues Training</h1>
       <p class="text-neutral-600">Punkte je Spieler:in und Kategorie erfassen.</p>
     </header>
+
+    <p v-if="isInitializing || isCreatingDraft" class="text-sm text-neutral-500">
+      Training wird vorbereitet…
+    </p>
+    <p v-if="initError || draftError" class="text-sm text-red-700" role="alert">
+      {{ initError?.message ?? draftError }}
+    </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <label class="block text-sm">
@@ -108,11 +156,7 @@ const onSave = async () => {
       :players="players"
       :categories="categories"
     />
-    <p
-      v-else-if="!players.length"
-      class="text-sm text-neutral-500"
-      data-testid="no-players-hint"
-    >
+    <p v-else-if="!players.length" class="text-sm text-neutral-500" data-testid="no-players-hint">
       Es sind keine aktiven Spieler:innen im Team. Bitte zuerst über
       <NuxtLink :to="`/t/${slug}/players`" class="underline">Spieler-Verwaltung</NuxtLink>
       anlegen.
@@ -145,11 +189,7 @@ const onSave = async () => {
       >
         {{ isSaving ? 'Speichere…' : 'Speichern' }}
       </button>
-      <p
-        v-if="photoCount === 0"
-        class="text-sm text-neutral-600"
-        data-testid="photo-required-hint"
-      >
+      <p v-if="photoCount === 0" class="text-sm text-neutral-600" data-testid="photo-required-hint">
         Mindestens 1 Foto ist erforderlich.
       </p>
     </div>

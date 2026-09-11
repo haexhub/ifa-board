@@ -20,7 +20,7 @@ type CellState = {
   error?: string
 }
 
-const { updateEntry } = useTrainings()
+const { updateEntry, deleteEntry } = useTrainings()
 
 const key = (playerId: string, categoryId: string): CellKey => `${playerId}:${categoryId}`
 
@@ -39,44 +39,73 @@ for (const p of props.players) {
   }
 }
 
-const jerseyLabel = (p: ActivePlayer) =>
-  p.jersey_number !== null ? `#${p.jersey_number}` : ''
+const jerseyLabel = (p: ActivePlayer) => (p.jersey_number !== null ? `#${p.jersey_number}` : '')
 
 const savingCount = ref(0)
 const dirtyCount = ref(0)
+const cellRevisions = new Map<CellKey, number>()
+const cellQueues = new Map<CellKey, Promise<void>>()
 
-const commitCell = async (playerId: string, categoryId: string, category: ActiveCategory) => {
+const commitCell = (playerId: string, categoryId: string, category: ActiveCategory) => {
   const k = key(playerId, categoryId)
   const state = cells[k]
   if (!state) return
-  if (state.value === null || Number.isNaN(state.value)) {
-    state.status = 'idle'
-    state.error = undefined
-    return
+  const revision = cellRevisions.get(k) ?? 0
+  const value = state.value
+
+  if (value !== null && !Number.isNaN(value)) {
+    const parsed = pointValueSchema(category.value_min, category.value_max).safeParse(value)
+    if (!parsed.success) {
+      state.status = 'error'
+      state.error = parsed.error.issues[0]?.message ?? 'Ungültig'
+      return
+    }
   }
-  const parsed = pointValueSchema(category.value_min, category.value_max).safeParse(state.value)
-  if (!parsed.success) {
-    state.status = 'error'
-    state.error = parsed.error.issues[0]?.message ?? 'Ungültig'
-    return
-  }
+
   state.status = 'saving'
   state.error = undefined
   savingCount.value += 1
-  try {
-    await updateEntry({
-      training_id: props.trainingId,
-      player_id: playerId,
-      category_id: categoryId,
-      value: parsed.data,
+
+  const previous = cellQueues.get(k) ?? Promise.resolve()
+  const current = previous
+    .catch(() => undefined)
+    .then(async () => {
+      try {
+        if (value === null || Number.isNaN(value)) {
+          await deleteEntry({
+            training_id: props.trainingId,
+            player_id: playerId,
+            category_id: categoryId,
+          })
+        } else {
+          const parsed = pointValueSchema(category.value_min, category.value_max).parse(value)
+          await updateEntry({
+            training_id: props.trainingId,
+            player_id: playerId,
+            category_id: categoryId,
+            value: parsed,
+          })
+        }
+        if (cellRevisions.get(k) === revision) state.status = 'saved'
+      } catch (err) {
+        if (cellRevisions.get(k) === revision) {
+          state.status = 'error'
+          state.error = err instanceof Error ? err.message : 'Speichern fehlgeschlagen'
+        }
+      } finally {
+        savingCount.value -= 1
+      }
     })
-    state.status = 'saved'
-  } catch (err) {
-    state.status = 'error'
-    state.error = err instanceof Error ? err.message : 'Speichern fehlgeschlagen'
-  } finally {
-    savingCount.value -= 1
-  }
+
+  cellQueues.set(k, current)
+  void current.then(
+    () => {
+      if (cellQueues.get(k) === current) cellQueues.delete(k)
+    },
+    () => {
+      if (cellQueues.get(k) === current) cellQueues.delete(k)
+    },
+  )
 }
 
 const onInput = (playerId: string, categoryId: string, evt: Event) => {
@@ -84,6 +113,7 @@ const onInput = (playerId: string, categoryId: string, evt: Event) => {
   const k = key(playerId, categoryId)
   const cell = cells[k]
   if (!cell) return
+  cellRevisions.set(k, (cellRevisions.get(k) ?? 0) + 1)
   cell.status = 'idle'
   if (target.value === '') {
     cell.value = null

@@ -16,6 +16,26 @@ export type TrainingPhotoRow = {
 
 export type TrainingPhotoView = TrainingPhotoRow & { signed_url: string }
 
+export class TrainingPhotoDatabaseError extends Error {
+  constructor(
+    readonly path: string,
+    readonly databaseError: unknown,
+    readonly cleanupError: unknown,
+  ) {
+    const databaseMessage =
+      databaseError instanceof Error
+        ? databaseError.message
+        : 'Foto konnte nicht gespeichert werden'
+    const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : ''
+    super(
+      cleanupError
+        ? `${databaseMessage} (Aufräumen fehlgeschlagen: ${cleanupMessage})`
+        : databaseMessage,
+    )
+    this.name = 'TrainingPhotoDatabaseError'
+  }
+}
+
 const randomUuid = (): string => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID()
@@ -69,8 +89,8 @@ export const useTrainingPhotos = () => {
       .select('*')
       .single()
     if (error) {
-      await client.storage.from(BUCKET).remove([path])
-      throw error
+      const { error: cleanupError } = await client.storage.from(BUCKET).remove([path])
+      throw new TrainingPhotoDatabaseError(path, error, cleanupError)
     }
     return data as TrainingPhotoRow
   }

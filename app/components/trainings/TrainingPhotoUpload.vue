@@ -4,7 +4,7 @@ import { useTrainingPhotos, type TrainingPhotoView } from '~/composables/useTrai
 import { PHOTO_MIME_TYPES } from '~/utils/validators'
 
 const props = defineProps<{ trainingId: string; teamId: string }>()
-const emit = defineEmits<{ uploaded: [] }>()
+const emit = defineEmits<{ uploaded: [count: number] }>()
 
 const { upload, list } = useTrainingPhotos()
 
@@ -19,6 +19,7 @@ type FileState = {
 }
 const queued = reactive<FileState[]>([])
 const isBusy = ref(false)
+const reloadError = ref<string | null>(null)
 
 const reload = async () => {
   photos.value = await list(props.trainingId)
@@ -35,6 +36,8 @@ const handlePick = async (evt: Event) => {
   input.value = ''
   isBusy.value = true
   let anyOk = false
+  let uploadedCount = 0
+  reloadError.value = null
   for (const file of files) {
     const state: FileState = {
       name: file.name,
@@ -46,14 +49,20 @@ const handlePick = async (evt: Event) => {
       await upload(props.trainingId, props.teamId, file)
       state.progress = 'done'
       anyOk = true
+      uploadedCount += 1
     } catch (err) {
       state.progress = 'error'
       state.error = err instanceof Error ? err.message : 'Upload fehlgeschlagen'
     }
   }
-  await reload()
-  if (anyOk) emit('uploaded')
-  isBusy.value = false
+  try {
+    await reload()
+  } catch (err) {
+    reloadError.value = err instanceof Error ? err.message : 'Fotos konnten nicht geladen werden'
+  } finally {
+    if (anyOk) emit('uploaded', uploadedCount)
+    isBusy.value = false
+  }
 }
 
 const openPicker = () => inputRef.value?.click()
@@ -108,30 +117,29 @@ const humanSize = (bytes: number) => {
     </ul>
 
     <div v-if="photos.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      <a
-        v-for="p in photos"
-        :key="p.id"
-        :href="p.signed_url"
-        target="_blank"
-        rel="noopener"
-        class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
-      >
-        <img
+      <template v-for="p in photos" :key="p.id">
+        <a
           v-if="p.signed_url"
-          :src="p.signed_url"
-          :alt="`Foto ${p.id}`"
-          class="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </a>
+          :href="p.signed_url"
+          target="_blank"
+          rel="noopener"
+          class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
+        >
+          <img
+            :src="p.signed_url"
+            :alt="`Foto ${p.id}`"
+            class="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </a>
+      </template>
     </div>
 
-    <p
-      v-if="photos.length === 0"
-      class="text-sm text-neutral-500"
-      data-testid="photo-empty-hint"
-    >
+    <p v-if="photos.length === 0" class="text-sm text-neutral-500" data-testid="photo-empty-hint">
       Noch keine Fotos hochgeladen.
+    </p>
+    <p v-if="reloadError" class="text-sm text-red-700" role="alert">
+      {{ reloadError }}
     </p>
   </section>
 </template>

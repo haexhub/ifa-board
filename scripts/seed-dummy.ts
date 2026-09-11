@@ -20,6 +20,22 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   process.exit(1)
 }
 
+let targetUrl: URL
+try {
+  targetUrl = new URL(SUPABASE_URL)
+} catch {
+  console.error('SUPABASE_URL is not a valid URL.')
+  process.exit(1)
+}
+
+const localHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
+if (!localHosts.has(targetUrl.hostname) && process.env.ALLOW_REMOTE_DUMMY_SEED !== 'true') {
+  console.error(
+    'Refusing to seed a remote Supabase project. Set ALLOW_REMOTE_DUMMY_SEED=true to override.',
+  )
+  process.exit(1)
+}
+
 const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
@@ -75,16 +91,12 @@ const seedCategories = async (team: TeamRow): Promise<number> => {
     .select('name')
     .eq('team_id', team.id)
   if (error) throw error
-  const known = new Set(
-    (existing ?? []).map((r) => (r as { name: string }).name.toLowerCase()),
-  )
-  const toInsert = CATEGORY_TEMPLATE.filter((c) => !known.has(c.name.toLowerCase())).map(
-    (c) => ({
-      team_id: team.id,
-      active: true,
-      ...c,
-    }),
-  )
+  const known = new Set((existing ?? []).map((r) => (r as { name: string }).name.toLowerCase()))
+  const toInsert = CATEGORY_TEMPLATE.filter((c) => !known.has(c.name.toLowerCase())).map((c) => ({
+    team_id: team.id,
+    active: true,
+    ...c,
+  }))
   if (toInsert.length === 0) return 0
   const { error: insertError } = await admin.from('point_categories').insert(toInsert)
   if (insertError) throw insertError

@@ -1,19 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
 import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
 import { useCategories, type ActiveCategory } from '~/composables/useCategories'
 import { usePlayers, type ActivePlayer } from '~/composables/usePlayers'
-import {
-  useTrainings,
-  type PointEntryRow,
-  type TrainingRow,
-} from '~/composables/useTrainings'
-import {
-  useTrainingPhotos,
-  type TrainingPhotoView,
-} from '~/composables/useTrainingPhotos'
+import { useTrainings, type PointEntryRow, type TrainingRow } from '~/composables/useTrainings'
+import { useTrainingPhotos, type TrainingPhotoView } from '~/composables/useTrainingPhotos'
 
 definePageMeta({
   middleware: ['team-context'],
@@ -38,30 +31,54 @@ const photos = ref<TrainingPhotoView[]>([])
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 
+type TrainingDetailData = {
+  training: TrainingRow | null
+  players: ActivePlayer[]
+  categories: ActiveCategory[]
+  entries: PointEntryRow[]
+  photos: TrainingPhotoView[]
+}
+
 const canSave = computed(
   () => training.value?.status === 'draft' && photos.value.length > 0 && !isSaving.value,
 )
 
-const loadPhotos = async () => {
-  photos.value = await listPhotos(trainingId)
-}
-
-const load = async () => {
-  if (!teamId.value) return
+const load = async (): Promise<TrainingDetailData> => {
+  if (!teamId.value) {
+    return { training: null, players: [], categories: [], entries: [], photos: [] }
+  }
   const [t, ps, cs, es] = await Promise.all([
     get(trainingId),
     listPlayers(teamId.value),
     listCategories(teamId.value),
     listEntries(trainingId),
   ])
-  training.value = t
-  players.value = ps
-  categories.value = cs
-  entries.value = es
-  await loadPhotos()
+  const photoRows = await listPhotos(trainingId)
+  return { training: t, players: ps, categories: cs, entries: es, photos: photoRows }
 }
 
-await load()
+const {
+  data: loaded,
+  pending: isLoading,
+  error: loadError,
+} = await useAsyncData(`training-detail-${trainingId}`, load, { watch: [teamId] })
+
+watch(
+  loaded,
+  (data) => {
+    if (!data) return
+    training.value = data.training
+    players.value = data.players
+    categories.value = data.categories
+    entries.value = data.entries
+    photos.value = data.photos
+  },
+  { immediate: true },
+)
+
+const loadPhotos = async () => {
+  photos.value = await listPhotos(trainingId)
+}
 
 const initialEntries = computed(() =>
   entries.value.map((e) => ({
@@ -93,13 +110,15 @@ const onSave = async () => {
   }
 }
 
-const statusLabel = computed(() =>
-  training.value?.status === 'saved' ? 'Gespeichert' : 'Entwurf',
-)
+const statusLabel = computed(() => (training.value?.status === 'saved' ? 'Gespeichert' : 'Entwurf'))
 </script>
 
 <template>
-  <section v-if="training" class="space-y-6" data-testid="training-detail-page">
+  <p v-if="isLoading" class="text-neutral-500">Training wird geladen…</p>
+  <p v-else-if="loadError" class="text-sm text-red-700" role="alert">
+    Training konnte nicht geladen werden: {{ loadError.message }}
+  </p>
+  <section v-else-if="training" class="space-y-6" data-testid="training-detail-page">
     <header class="space-y-1">
       <div class="flex items-center gap-2">
         <h1 class="text-2xl font-semibold text-neutral-900">
@@ -163,9 +182,7 @@ const statusLabel = computed(() =>
         <table class="w-full text-sm border-collapse" data-testid="training-readonly-grid">
           <thead class="bg-neutral-100">
             <tr>
-              <th class="border-b border-r border-neutral-200 px-3 py-2 text-left">
-                Spieler:in
-              </th>
+              <th class="border-b border-r border-neutral-200 px-3 py-2 text-left">Spieler:in</th>
               <th
                 v-for="c in categories"
                 :key="c.id"
@@ -192,29 +209,26 @@ const statusLabel = computed(() =>
         </table>
       </div>
       <div v-if="photos.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <a
-          v-for="p in photos"
-          :key="p.id"
-          :href="p.signed_url"
-          target="_blank"
-          rel="noopener"
-          class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
-        >
-          <img
+        <template v-for="p in photos" :key="p.id">
+          <a
             v-if="p.signed_url"
-            :src="p.signed_url"
-            :alt="`Foto ${p.id}`"
-            class="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </a>
+            :href="p.signed_url"
+            target="_blank"
+            rel="noopener"
+            class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
+          >
+            <img
+              :src="p.signed_url"
+              :alt="`Foto ${p.id}`"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+          </a>
+        </template>
       </div>
     </template>
 
-    <NuxtLink
-      :to="`/t/${slug}/trainings`"
-      class="inline-block text-sm text-neutral-600 underline"
-    >
+    <NuxtLink :to="`/t/${slug}/trainings`" class="inline-block text-sm text-neutral-600 underline">
       ← Zur Trainings-Liste
     </NuxtLink>
   </section>
