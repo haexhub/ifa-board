@@ -13,19 +13,21 @@ export const useAuth = () => {
   // URLs are honored, so a bare "/" would defeat the callback entirely).
   const signInWithMagicLink = async (email: string, redirectTo?: string) => {
     const origin = useRequestURL().origin
-    if (import.meta.client) {
-      if (redirectTo && redirectTo !== '/') {
-        localStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo)
-      } else {
-        localStorage.removeItem(POST_LOGIN_REDIRECT_KEY)
-      }
-    }
-    return client.auth.signInWithOtp({
+    const result = await client.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${origin}/callback`,
       },
     })
+
+    if (import.meta.client) {
+      if (!result.error && redirectTo && redirectTo !== '/') {
+        localStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo)
+      } else {
+        localStorage.removeItem(POST_LOGIN_REDIRECT_KEY)
+      }
+    }
+    return result
   }
 
   const signOut = async () => client.auth.signOut()

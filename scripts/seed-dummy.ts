@@ -29,9 +29,11 @@ try {
 }
 
 const localHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]'])
-if (!localHosts.has(targetUrl.hostname) && process.env.ALLOW_REMOTE_DUMMY_SEED !== 'true') {
+const isLocalTarget = localHosts.has(targetUrl.hostname)
+const isRemoteOverride = process.env.ALLOW_REMOTE_DUMMY_SEED === 'true'
+if (!isLocalTarget && (!isRemoteOverride || targetUrl.protocol !== 'https:')) {
   console.error(
-    'Refusing to seed a remote Supabase project. Set ALLOW_REMOTE_DUMMY_SEED=true to override.',
+    'Refusing to seed this Supabase project. Remote targets require HTTPS and ALLOW_REMOTE_DUMMY_SEED=true.',
   )
   process.exit(1)
 }
