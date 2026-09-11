@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { POST_LOGIN_REDIRECT_KEY } from '~/composables/useAuth'
 import type { Database } from '~/types/database'
 
 definePageMeta({
@@ -11,15 +12,25 @@ const route = useRoute()
 const client = useSupabaseClient<Database>()
 const error = ref<string | null>(null)
 
+const readStoredRedirect = (): string | null => {
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem(POST_LOGIN_REDIRECT_KEY)
+  localStorage.removeItem(POST_LOGIN_REDIRECT_KEY)
+  if (!raw) return null
+  if (!raw.startsWith('/') || raw[1] === '/' || raw[1] === '\\') return null
+  return raw
+}
+
 const finalize = async () => {
   const rawRedirect = route.query.redirect
-  const redirect =
+  const queryRedirect =
     typeof rawRedirect === 'string' &&
     rawRedirect.startsWith('/') &&
     rawRedirect[1] !== '/' &&
     rawRedirect[1] !== '\\'
       ? rawRedirect
       : null
+  const redirect = queryRedirect ?? readStoredRedirect()
 
   if (redirect) {
     await navigateTo(redirect, { replace: true })
@@ -60,6 +71,16 @@ const consumeImplicitFragment = async (): Promise<boolean> => {
   return true
 }
 
+const consumePkceCode = async (): Promise<boolean> => {
+  if (typeof window === 'undefined') return false
+  const code = new URLSearchParams(window.location.search).get('code')
+  if (!code) return false
+  const { error: exchangeErr } = await client.auth.exchangeCodeForSession(code)
+  if (exchangeErr) return false
+  history.replaceState(null, '', window.location.pathname)
+  return true
+}
+
 const pollForSession = async () => {
   const deadline = Date.now() + 10_000
   while (Date.now() < deadline) {
@@ -73,6 +94,7 @@ const pollForSession = async () => {
 
 onMounted(async () => {
   await consumeImplicitFragment()
+  await consumePkceCode()
   const ok = await pollForSession()
   if (!ok) {
     error.value =

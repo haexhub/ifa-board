@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import 'dotenv/config'
 
 const externalBaseUrl = process.env.E2E_BASE_URL
 const baseURL = externalBaseUrl ?? 'http://localhost:3000'
