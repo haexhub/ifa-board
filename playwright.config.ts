@@ -9,7 +9,9 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // The dev server does not survive many concurrent fresh signup + Supabase
+  // client boots; serialize test runs to keep results deterministic.
+  workers: 1,
   reporter: 'html',
   use: {
     baseURL,
