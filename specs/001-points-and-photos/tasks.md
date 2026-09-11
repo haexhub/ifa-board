@@ -162,7 +162,7 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 - [X] T066 [P] [US1] Component `app/components/trainings/TrainingPointGrid.vue` — sticky-header table, rows=players, cols=categories, `input type="number"` with per-category `min/max`, auto-save on blur; ≥44px min-height per row
 - [X] T067 [P] [US1] Component `app/components/trainings/TrainingPhotoUpload.vue` — multi-file picker; per-file progress + error
 - [X] T068 [P] [US1] Component `app/components/trainings/ConsentWarningBanner.vue` — red shadcn `Alert` listing active players without `photo_consent`
-- [X] T069 [US1] Page `app/pages/t/[slug]/trainings/new.vue` — trainer-only; creates a draft on mount, renders grid + uploader + banner; "Speichern" disabled until ≥1 photo; on save transitions to `saved` and navigates to `[id].vue`
+- [X] T069 [US1] Page `app/pages/t/[slug]/trainings/new.vue` — trainer-only; creates a draft on mount, renders grid + uploader + banner; photos are optional; on save transitions to `saved` and navigates to `[id].vue`
 - [X] T070 [US1] Page `app/pages/t/[slug]/trainings/[id].vue` — trainer sees editor; player sees read-only summary; shows `last_updated_by/at`
 - [X] T071 [US1] Page `app/pages/t/[slug]/trainings/index.vue` — chronological list; trainer sees drafts + saved; player sees only saved
 - [X] T072 [P] [US1] Unit test `tests/unit/validators.spec.ts` — zod schemas for point-value range, photo (MIME + size), date (no future)

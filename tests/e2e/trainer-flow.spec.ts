@@ -148,9 +148,8 @@ test.describe('US1 — trainer records point entries + at least one photo', () =
     await expect(banner).toContainText('Bruno')
     await expect(banner).not.toContainText('Alice')
 
-    // Save button disabled until a photo lands.
-    await expect(page.getByTestId('training-save-button')).toBeDisabled()
-    await expect(page.getByTestId('photo-required-hint')).toBeVisible()
+    // Save button is enabled as soon as the draft exists — photos are optional.
+    await expect(page.getByTestId('training-save-button')).toBeEnabled({ timeout: 15_000 })
 
     // Enter one point value → auto-save on blur → check mark shows up.
     const aliceEinsatz = page.locator(
@@ -160,14 +159,13 @@ test.describe('US1 — trainer records point entries + at least one photo', () =
     await aliceEinsatz.first().blur()
     await expect(page.getByText('✓').first()).toBeVisible({ timeout: 10_000 })
 
-    // Upload a photo → save button unlocks.
+    // Upload one photo — optional, but exercises the storage path.
     await page.getByTestId('photo-upload-input').setInputFiles({
       name: 'training.png',
       mimeType: 'image/png',
       buffer: PNG_1x1,
     })
     await expect(page.getByTestId('photo-empty-hint')).toBeHidden({ timeout: 15_000 })
-    await expect(page.getByTestId('training-save-button')).toBeEnabled({ timeout: 15_000 })
 
     // Save and land on the detail page in status "saved".
     await page.getByTestId('training-save-button').click()
@@ -184,7 +182,7 @@ test.describe('US1 — trainer records point entries + at least one photo', () =
     await trainerCtx.close()
   })
 
-  test('save without a photo is blocked by the DB trigger', async ({ browser }) => {
+  test('trainer can save a training without uploading any photo', async ({ browser }) => {
     test.setTimeout(120_000)
     const suffix = uniqueSuffix()
     const trainerEmail = `trainer-nophoto-${suffix}@example.com`
@@ -205,8 +203,12 @@ test.describe('US1 — trainer records point entries + at least one photo', () =
     await seedTeamData(teamSlug)
 
     await page.goto(`/t/${teamSlug}/trainings/new`, { waitUntil: 'networkidle' })
-    // Save is guarded in the UI and would also fail in the DB — just check the guard.
-    await expect(page.getByTestId('training-save-button')).toBeDisabled()
+    await expect(page.getByTestId('training-save-button')).toBeEnabled({ timeout: 15_000 })
+    await page.getByTestId('training-save-button').click()
+    await page.waitForURL(new RegExp(`/t/${teamSlug}/trainings/[0-9a-f-]+`), {
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId('training-status-badge')).toHaveText('Gespeichert')
 
     await ctx.close()
   })

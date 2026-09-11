@@ -40,7 +40,7 @@ type TrainingDetailData = {
 }
 
 const canSave = computed(
-  () => training.value?.status === 'draft' && photos.value.length > 0 && !isSaving.value,
+  () => training.value?.status === 'draft' && !isSaving.value,
 )
 
 const load = async (): Promise<TrainingDetailData> => {
@@ -160,20 +160,16 @@ const statusLabel = computed(() => (training.value?.status === 'saved' ? 'Gespei
         @uploaded="loadPhotos"
       />
 
-      <div v-if="training.status === 'draft'" class="flex items-center gap-3">
-        <button
-          type="button"
-          class="min-h-touch px-4 rounded bg-neutral-900 text-white text-sm font-semibold disabled:opacity-40"
-          :disabled="!canSave"
-          data-testid="training-save-button"
-          @click="onSave"
-        >
-          {{ isSaving ? 'Speichere…' : 'Speichern' }}
-        </button>
-        <p v-if="photos.length === 0" class="text-sm text-neutral-600">
-          Mindestens 1 Foto ist erforderlich.
-        </p>
-      </div>
+      <button
+        v-if="training.status === 'draft'"
+        type="button"
+        class="min-h-touch px-4 rounded bg-neutral-900 text-white text-sm font-semibold disabled:opacity-40"
+        :disabled="!canSave"
+        data-testid="training-save-button"
+        @click="onSave"
+      >
+        {{ isSaving ? 'Speichere…' : 'Speichern' }}
+      </button>
       <p v-if="saveError" class="text-sm text-red-700" role="alert">{{ saveError }}</p>
     </template>
 

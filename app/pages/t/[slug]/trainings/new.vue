@@ -25,7 +25,6 @@ const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart
 const training = ref<TrainingRow | null>(null)
 const players = ref<ActivePlayer[]>([])
 const categories = ref<ActiveCategory[]>([])
-const photoCount = ref(0)
 const saveError = ref<string | null>(null)
 const draftError = ref<string | null>(null)
 const isSaving = ref(false)
@@ -33,9 +32,7 @@ const isCreatingDraft = ref(false)
 const title = ref('')
 const date = ref(isoToday)
 
-const uploader = ref<InstanceType<typeof TrainingPhotoUpload> | null>(null)
-
-const canSave = computed(() => !!training.value && photoCount.value > 0 && !isSaving.value)
+const canSave = computed(() => !!training.value && !isSaving.value)
 
 const {
   data: initialData,
@@ -88,11 +85,6 @@ watch(
   },
   { flush: 'post' },
 )
-
-const onPhotoUploaded = () => {
-  const count = uploader.value?.photos?.length ?? 0
-  photoCount.value = count
-}
 
 const onSave = async () => {
   if (!training.value) return
@@ -173,26 +165,19 @@ const onSave = async () => {
 
     <TrainingPhotoUpload
       v-if="training && teamId"
-      ref="uploader"
       :training-id="training.id"
       :team-id="teamId"
-      @uploaded="onPhotoUploaded"
     />
 
-    <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-      <button
-        type="button"
-        class="min-h-touch px-4 rounded bg-neutral-900 text-white text-sm font-semibold disabled:opacity-40"
-        :disabled="!canSave"
-        data-testid="training-save-button"
-        @click="onSave"
-      >
-        {{ isSaving ? 'Speichere…' : 'Speichern' }}
-      </button>
-      <p v-if="photoCount === 0" class="text-sm text-neutral-600" data-testid="photo-required-hint">
-        Mindestens 1 Foto ist erforderlich.
-      </p>
-    </div>
+    <button
+      type="button"
+      class="min-h-touch px-4 rounded bg-neutral-900 text-white text-sm font-semibold disabled:opacity-40"
+      :disabled="!canSave"
+      data-testid="training-save-button"
+      @click="onSave"
+    >
+      {{ isSaving ? 'Speichere…' : 'Speichern' }}
+    </button>
 
     <p v-if="saveError" class="text-sm text-red-700" role="alert">{{ saveError }}</p>
   </section>
