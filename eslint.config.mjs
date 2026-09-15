@@ -13,6 +13,9 @@ const nuxtGlobals = {
   useRoute: 'readonly',
   useSupabaseClient: 'readonly',
   useSupabaseUser: 'readonly',
+  definePageMeta: 'readonly',
+  useTeamContext: 'readonly',
+  usePlayers: 'readonly',
 }
 
 export default [

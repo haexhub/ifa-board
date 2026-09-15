@@ -24,21 +24,20 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 let latestLoad = 0
 
-const loadCandidates = async () => {
+const loadCandidates = async (teamId: string, rows: PlayerRow[]): Promise<Candidate[]> => {
   const { data: memberships, error: memErr } = await client
     .from('memberships')
     .select('user_id')
-    .eq('team_id', props.teamId)
+    .eq('team_id', teamId)
     .eq('role', 'player')
   if (memErr) throw memErr
 
   const linkedIds = new Set(
-    players.value.map((p) => p.linked_user_id).filter((id): id is string => !!id),
+    rows.map((p) => p.linked_user_id).filter((id): id is string => !!id),
   )
   const unlinkedIds = (memberships ?? []).map((m) => m.user_id).filter((id) => !linkedIds.has(id))
   if (unlinkedIds.length === 0) {
-    candidates.value = []
-    return
+    return []
   }
 
   const { data: profiles, error: profErr } = await client
@@ -46,19 +45,24 @@ const loadCandidates = async () => {
     .select('id, display_name')
     .in('id', unlinkedIds)
   if (profErr) throw profErr
-  candidates.value = (profiles ?? []).map((p) => ({ user_id: p.id, display_name: p.display_name }))
+  return (profiles ?? []).map((p) => ({ user_id: p.id, display_name: p.display_name }))
 }
 
 const load = async () => {
   const loadId = ++latestLoad
+  const teamId = props.teamId
   loading.value = true
   error.value = null
+  players.value = []
+  candidates.value = []
+  linkSelection.value = {}
   try {
-    const rows = await list(props.teamId)
-    if (loadId !== latestLoad) return
+    const rows = await list(teamId)
+    if (loadId !== latestLoad || props.teamId !== teamId) return
     players.value = rows
-    await loadCandidates()
-    if (loadId !== latestLoad) return
+    const nextCandidates = await loadCandidates(teamId, rows)
+    if (loadId !== latestLoad || props.teamId !== teamId) return
+    candidates.value = nextCandidates
   } catch (err) {
     if (loadId === latestLoad) error.value = (err as Error).message
   } finally {

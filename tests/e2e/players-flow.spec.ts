@@ -167,9 +167,23 @@ test.describe('US4 — trainer manages the player roster', () => {
     // unambiguous regardless of its label.
     await trainerPage.reload({ waitUntil: 'networkidle' })
     const bRowFinal = trainerPage.getByTestId('player-row').filter({ hasText: 'Bruno Bereit II' })
-    await bRowFinal.getByLabel(/Konto für Bruno Bereit II wählen/).selectOption({ index: 1 })
+    const accountSelect = bRowFinal.getByLabel(/Konto für Bruno Bereit II wählen/)
+    await accountSelect.selectOption({ index: 1 })
     await bRowFinal.getByTestId('player-link-button').click()
     await expect(bRowFinal.getByTestId('player-linked')).toBeVisible({ timeout: 10_000 })
+
+    // Changing the membership role clears the player link atomically.
+    await trainerPage.goto(`/t/${teamSlug}/team/members`, { waitUntil: 'networkidle' })
+    const memberRow = trainerPage.locator('li').filter({
+      has: trainerPage.locator('option:checked').filter({ hasText: /^Spieler$/ }),
+    })
+    await expect(memberRow).toHaveCount(1)
+    await memberRow.locator('select').selectOption('trainer')
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    const unlinkedBruno = trainerPage.getByTestId('player-row').filter({ hasText: 'Bruno Bereit II' })
+    await expect(unlinkedBruno.getByTestId('player-linked')).toHaveCount(0)
+    await expect(unlinkedBruno.getByLabel(/Konto für Bruno Bereit II wählen/)).toHaveCount(0)
 
     await trainerCtx.close()
     await inviteeCtx.close()
