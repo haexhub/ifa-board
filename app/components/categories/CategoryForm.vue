@@ -77,8 +77,12 @@ const submit = async () => {
     }
     emit('saved')
   } catch (err) {
-    const e = err as { statusCode?: number; statusMessage?: string; message?: string }
-    submitError.value = e.statusMessage ?? e.message ?? 'Kategorie konnte nicht gespeichert werden.'
+    const e = err as { code?: string; statusCode?: number; statusMessage?: string; message?: string }
+    if (e.code === '23505') {
+      submitError.value = 'Eine Kategorie mit diesem Namen existiert in diesem Team bereits.'
+    } else {
+      submitError.value = e.statusMessage ?? e.message ?? 'Kategorie konnte nicht gespeichert werden.'
+    }
   } finally {
     loading.value = false
   }
