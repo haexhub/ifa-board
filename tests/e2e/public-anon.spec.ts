@@ -3,7 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54324'
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY ?? ''
-const SUPABASE_ANON_KEY = process.env.SUPABASE_KEY ?? ''
+const SUPABASE_ANON_KEY =
+  process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_KEY ?? ''
 
 const restHeaders = () => ({
   apikey: SUPABASE_SERVICE_KEY,
