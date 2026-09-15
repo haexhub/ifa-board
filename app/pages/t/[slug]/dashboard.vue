@@ -185,6 +185,13 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
       >
         Kategorien
       </NuxtLink>
+      <NuxtLink
+        v-if="isTrainer"
+        :to="`/t/${slug}/players`"
+        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
+      >
+        Spieler
+      </NuxtLink>
     </nav>
 
     <RankingTable
