@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
+import TrainingPhotoGallery from '~/components/trainings/TrainingPhotoGallery.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
 import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
 import { useCategories, type ActiveCategory } from '~/composables/useCategories'
 import { usePlayers, type ActivePlayer } from '~/composables/usePlayers'
 import { useTrainings, type PointEntryRow, type TrainingRow } from '~/composables/useTrainings'
-import { useTrainingPhotos, type TrainingPhotoView } from '~/composables/useTrainingPhotos'
+import { useTrainingPhotos, type ConsentStatus, type TrainingPhotoView } from '~/composables/useTrainingPhotos'
 
 definePageMeta({
   middleware: ['team-context'],
@@ -21,13 +22,14 @@ const slug = computed(() => currentTeam.value?.slug ?? '')
 const { get, listEntries, save } = useTrainings()
 const { listActive: listPlayers } = usePlayers()
 const { listActive: listCategories } = useCategories()
-const { list: listPhotos } = useTrainingPhotos()
+const { list: listPhotos, deriveConsentStatus } = useTrainingPhotos()
 
 const training = ref<TrainingRow | null>(null)
 const players = ref<ActivePlayer[]>([])
 const categories = ref<ActiveCategory[]>([])
 const entries = ref<PointEntryRow[]>([])
 const photos = ref<TrainingPhotoView[]>([])
+const consentStatus = ref<ConsentStatus>('clean')
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 
@@ -37,6 +39,7 @@ type TrainingDetailData = {
   categories: ActiveCategory[]
   entries: PointEntryRow[]
   photos: TrainingPhotoView[]
+  consentStatus: ConsentStatus
 }
 
 const canSave = computed(
@@ -44,24 +47,49 @@ const canSave = computed(
 )
 
 const load = async (): Promise<TrainingDetailData> => {
-  if (!teamId.value) {
-    return { training: null, players: [], categories: [], entries: [], photos: [] }
+  // Fetch the training first and derive its team_id from the row itself,
+  // rather than from useTeamContext()'s async membership lookup — that lookup
+  // can still be in flight on a first-ever SSR visit (e.g. a player opening a
+  // shared training link directly, with no prior page view to have warmed
+  // it). Depending on it here previously meant this page could permanently
+  // render "Training nicht gefunden": load() would run once with an empty
+  // team id, and because that id resolves to its final value with no
+  // observable *change* during hydration, a `watch`-based refetch never
+  // fires to correct it. RLS already scopes `get(trainingId)` correctly, so
+  // no team_id is needed to fetch the training itself in the first place.
+  const [t, es] = await Promise.all([get(trainingId), listEntries(trainingId)])
+  if (!t) {
+    return {
+      training: null,
+      players: [],
+      categories: [],
+      entries: es,
+      photos: [],
+      consentStatus: 'blocked',
+    }
   }
-  const [t, ps, cs, es] = await Promise.all([
-    get(trainingId),
-    listPlayers(teamId.value),
-    listCategories(teamId.value),
-    listEntries(trainingId),
+  const [ps, cs, cStatus] = await Promise.all([
+    listPlayers(t.team_id),
+    listCategories(t.team_id),
+    deriveConsentStatus(t.team_id),
   ])
-  const photoRows = await listPhotos(trainingId)
-  return { training: t, players: ps, categories: cs, entries: es, photos: photoRows }
+  const maySeePhotos = isTrainer.value || cStatus === 'clean'
+  const photoRows = maySeePhotos ? await listPhotos(trainingId) : []
+  return {
+    training: t,
+    players: ps,
+    categories: cs,
+    entries: es,
+    photos: photoRows,
+    consentStatus: cStatus,
+  }
 }
 
 const {
   data: loaded,
   pending: isLoading,
   error: loadError,
-} = await useAsyncData(`training-detail-${trainingId}`, load, { watch: [teamId] })
+} = await useAsyncData(`training-detail-${trainingId}`, load)
 
 watch(
   loaded,
@@ -72,6 +100,7 @@ watch(
     categories.value = data.categories
     entries.value = data.entries
     photos.value = data.photos
+    consentStatus.value = data.consentStatus
   },
   { immediate: true },
 )
@@ -204,24 +233,7 @@ const statusLabel = computed(() => (training.value?.status === 'saved' ? 'Gespei
           </tbody>
         </table>
       </div>
-      <div v-if="photos.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        <template v-for="p in photos" :key="p.id">
-          <a
-            v-if="p.signed_url"
-            :href="p.signed_url"
-            target="_blank"
-            rel="noopener"
-            class="block aspect-square overflow-hidden rounded border border-neutral-200 bg-neutral-100"
-          >
-            <img
-              :src="p.signed_url"
-              :alt="`Foto ${p.id}`"
-              class="w-full h-full object-cover"
-              loading="lazy"
-            />
-          </a>
-        </template>
-      </div>
+      <TrainingPhotoGallery :photos="photos" :consent-status="consentStatus" :is-trainer="false" />
     </template>
 
     <NuxtLink :to="`/t/${slug}/trainings`" class="inline-block text-sm text-neutral-600 underline">

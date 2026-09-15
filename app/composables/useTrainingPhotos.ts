@@ -16,6 +16,8 @@ export type TrainingPhotoRow = {
 
 export type TrainingPhotoView = TrainingPhotoRow & { signed_url: string }
 
+export type ConsentStatus = 'clean' | 'blocked'
+
 export class TrainingPhotoDatabaseError extends Error {
   constructor(
     readonly path: string,
@@ -117,5 +119,12 @@ export const useTrainingPhotos = () => {
     return rows.map((r) => ({ ...r, signed_url: byPath.get(r.storage_path) ?? '' }))
   }
 
-  return { upload, list }
+  const deriveConsentStatus = async (team_id: string): Promise<ConsentStatus> => {
+    const { listActive } = usePlayers()
+    const players = await listActive(team_id)
+    if (players.length === 0) return 'blocked'
+    return players.every((p) => p.photo_consent) ? 'clean' : 'blocked'
+  }
+
+  return { upload, list, deriveConsentStatus }
 }

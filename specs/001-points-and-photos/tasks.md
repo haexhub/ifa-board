@@ -272,13 +272,13 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 6
 
-- [ ] T099 [P] [US6] Playwright test `tests/e2e/photos-flow.spec.ts` — player sees photos of consent-clean training and placeholder for consent-blocked training; direct Storage URL access as anon is denied
+- [X] T099 [P] [US6] Playwright test `tests/e2e/photos-flow.spec.ts` — player sees photos of consent-clean training and placeholder for consent-blocked training; direct Storage URL access as anon is denied
 
 ### Implementation for User Story 6
 
-- [ ] T100 [P] [US6] Extend `app/composables/useTrainingPhotos.ts` with `deriveConsentStatus(team_id)` — returns `clean` iff every active player in the team has `photo_consent = true`
-- [ ] T101 [US6] Component `app/components/trainings/TrainingPhotoGallery.vue` — mobile-scroll grid; renders placeholder overlay for `player` role when consent is `blocked`; trainer always sees raw thumbnails
-- [ ] T102 [US6] Wire `TrainingPhotoGallery` into `app/pages/t/[slug]/trainings/[id].vue`
+- [X] T100 [P] [US6] Extend `app/composables/useTrainingPhotos.ts` with `deriveConsentStatus(team_id)` — returns `clean` iff every active player in the team has `photo_consent = true`
+- [X] T101 [US6] Component `app/components/trainings/TrainingPhotoGallery.vue` — mobile-scroll grid; renders placeholder overlay for `player` role when consent is `blocked`; trainer always sees raw thumbnails
+- [X] T102 [US6] Wire `TrainingPhotoGallery` into `app/pages/t/[slug]/trainings/[id].vue` — also fixes a pre-existing bug found while writing T099's e2e test: a player's first-ever (SSR) visit to this page could permanently render "Training nicht gefunden" because `load()` gated everything on `useTeamContext()`'s async membership lookup, which can still be in flight on a cold visit, and the `watch`-based refetch never re-fired once it resolved (no observable value *change* across hydration). Fixed by deriving `team_id` from the fetched training row itself instead.
 
 **Checkpoint**: US6 complete.
 
