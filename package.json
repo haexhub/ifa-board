@@ -18,6 +18,8 @@
     "format": "prettier --write .",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
     "gen:types": "supabase gen types typescript --local > app/types/database.ts",
     "db:reset": "supabase db reset",
     "db:generate": "drizzle-kit generate",
