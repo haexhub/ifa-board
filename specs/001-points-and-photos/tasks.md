@@ -206,14 +206,14 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 3
 
-- [ ] T084 [P] [US3] Playwright test `tests/e2e/categories-flow.spec.ts` — create, rename, reorder, deactivate; check propagation to `/trainings/new`
+- [X] T084 [P] [US3] Playwright test `tests/e2e/categories-flow.spec.ts` — create, rename, reorder, deactivate; check propagation to `/trainings/new`
 
 ### Implementation for User Story 3
 
-- [ ] T085 [US3] Extend `app/composables/useCategories.ts` with `create(team_id, …)`, `update(id, …)`, `deactivate(id)`, `reorder(team_id, [{id, sort_order}])`
-- [ ] T086 [P] [US3] Component `app/components/categories/CategoryForm.vue` — zod-validated (name, value_min ≤ value_max, sort_order, active)
-- [ ] T087 [P] [US3] Component `app/components/categories/CategoryList.vue` — up/down buttons (touch-friendly), "Deaktivieren" action, delete action hidden when `point_entries` exist (checked via count query)
-- [ ] T088 [US3] Page `app/pages/t/[slug]/categories/index.vue` — trainer-only; renders `CategoryList` + "Neue Kategorie" dialog with `CategoryForm`
+- [X] T085 [US3] Extend `app/composables/useCategories.ts` with `create(team_id, …)`, `update(id, …)`, `deactivate(id)`, `reorder(team_id, [{id, sort_order}])`
+- [X] T086 [P] [US3] Component `app/components/categories/CategoryForm.vue` — zod-validated (name, value_min ≤ value_max, sort_order, active)
+- [X] T087 [P] [US3] Component `app/components/categories/CategoryList.vue` — up/down buttons (touch-friendly), "Deaktivieren" action, delete action hidden when `point_entries` exist (checked via count query)
+- [X] T088 [US3] Page `app/pages/t/[slug]/categories/index.vue` — trainer-only; renders `CategoryList` + "Neue Kategorie" dialog with `CategoryForm`
 
 **Checkpoint**: US3 complete.
 
