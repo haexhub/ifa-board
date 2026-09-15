@@ -227,14 +227,14 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Tests for User Story 4
 
-- [ ] T089 [P] [US4] Playwright test `tests/e2e/players-flow.spec.ts` — CRUD, consent toggle, active-jersey-uniqueness violation surfaced, `linked_user_id` set via invite
+- [X] T089 [P] [US4] Playwright test `tests/e2e/players-flow.spec.ts` — CRUD, consent toggle, active-jersey-uniqueness violation surfaced, `linked_user_id` set via invite
 
 ### Implementation for User Story 4
 
-- [ ] T090 [US4] Extend `app/composables/usePlayers.ts` with `list(team_id)`, `create(team_id, …)`, `update(id, …)`, `setActive(id, value)`, `setConsent(id, value)`, `linkUser(id, user_id)` (sets `linked_user_id`)
-- [ ] T091 [P] [US4] Component `app/components/players/PlayerForm.vue` — zod-validated (name required, jersey optional int, position optional, consent, active)
-- [ ] T092 [P] [US4] Component `app/components/players/PlayerList.vue` — table with edit / deactivate / invite actions; consent toggle inline; invite CTA opens the same `InviteForm` with pre-filled role=`player`
-- [ ] T093 [US4] Page `app/pages/t/[slug]/players/index.vue` — trainer-only; renders `PlayerList` + "Neuer Spieler" dialog with `PlayerForm`
+- [X] T090 [US4] Extend `app/composables/usePlayers.ts` with `list(team_id)`, `create(team_id, …)`, `update(id, …)`, `setActive(id, value)`, `setConsent(id, value)`, `linkUser(id, user_id)` (sets `linked_user_id`)
+- [X] T091 [P] [US4] Component `app/components/players/PlayerForm.vue` — zod-validated (name required, jersey optional int, position optional, consent, active)
+- [X] T092 [P] [US4] Component `app/components/players/PlayerList.vue` — table with edit / deactivate / invite actions; consent toggle inline; invite CTA opens the same `InviteForm` with pre-filled role=`player`
+- [X] T093 [US4] Page `app/pages/t/[slug]/players/index.vue` — trainer-only; renders `PlayerList` + "Neuer Spieler" dialog with `PlayerForm`
 
 **Checkpoint**: US4 complete. Players end-to-end managed.
 

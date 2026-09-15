@@ -1,0 +1,177 @@
+import { expect, test, type Page } from '@playwright/test'
+
+const MAILPIT_URL = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54324'
+
+const uniqueSuffix = () => Math.random().toString(36).slice(2, 8)
+
+type MailpitMessage = {
+  ID: string
+  Created: string
+  To: { Address: string }[]
+  Subject: string
+}
+
+const fetchLatestMagicLink = async (email: string, matcher?: RegExp): Promise<string> => {
+  const target = email.toLowerCase()
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const listRes = await fetch(`${MAILPIT_URL}/api/v1/messages?limit=200`)
+    if (listRes.ok) {
+      const list = (await listRes.json()) as { messages: MailpitMessage[] }
+      const relevant = list.messages
+        .filter((m) => m.To.some((t) => t.Address.toLowerCase() === target))
+        .sort((a, b) => (a.Created < b.Created ? 1 : -1))
+      for (const m of relevant) {
+        const msgRes = await fetch(`${MAILPIT_URL}/api/v1/message/${m.ID}`)
+        if (!msgRes.ok) continue
+        const msg = (await msgRes.json()) as { HTML?: string; Text?: string }
+        const body = msg.HTML ?? msg.Text ?? ''
+        const urls = body.match(/https?:\/\/[^\s"<>]+/g) ?? []
+        const link = urls.find((u) => (matcher ?? /token=|verify|invite\//i).test(u))
+        if (link) {
+          await fetch(`${MAILPIT_URL}/api/v1/messages`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ IDs: [m.ID] }),
+          })
+          return link.replace(/&amp;/g, '&')
+        }
+      }
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  throw new Error(`No magic link received for ${email}`)
+}
+
+const setupPage = (page: Page) => {
+  page.on('pageerror', (err) => console.error(`[browser error] ${err.message}`))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') console.error(`[browser console] ${msg.text()}`)
+  })
+}
+
+const signInWithMagicLink = async (page: Page, email: string) => {
+  await page.goto('/login', { waitUntil: 'networkidle' })
+  await expect(page.getByRole('button', { name: /link senden/i })).toBeEnabled()
+  await page.getByLabel(/e-mail/i).fill(email)
+  await page.getByRole('button', { name: /link senden/i }).click()
+  await expect(page.getByText(/prüfe deine e-mails/i)).toBeVisible({ timeout: 15_000 })
+  const link = await fetchLatestMagicLink(email)
+  await page.goto(link, { waitUntil: 'networkidle' })
+}
+
+test.describe('US4 — trainer manages the player roster', () => {
+  test('CRUD, consent toggle, jersey-uniqueness violation, link via invite', async ({ browser }) => {
+    test.setTimeout(150_000)
+    const suffix = uniqueSuffix()
+    const trainerEmail = `trainer-plr-${suffix}@example.com`
+    const inviteeEmail = `player-plr-${suffix}@example.com`
+    const teamName = `US4 Team ${suffix}`
+    const teamSlug = `us4-team-${suffix}`
+
+    const trainerCtx = await browser.newContext()
+    const trainerPage = await trainerCtx.newPage()
+    setupPage(trainerPage)
+
+    // Trainer signs in and founds a fresh team.
+    await signInWithMagicLink(trainerPage, trainerEmail)
+    await trainerPage.waitForURL(/\/start$/, { timeout: 15_000 })
+    await trainerPage.getByLabel(/team-name/i).fill(teamName)
+    await trainerPage.getByLabel(/slug/i).fill(teamSlug)
+    await trainerPage.getByRole('button', { name: /team gründen/i }).click()
+    await trainerPage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    await expect(trainerPage.getByTestId('players-page')).toBeVisible()
+
+    const playerDialog = trainerPage.getByTestId('player-dialog')
+    const rows = trainerPage.getByTestId('player-row')
+
+    // Create player A with jersey #7.
+    await trainerPage.getByTestId('player-new-button').click()
+    await expect(playerDialog).toBeVisible()
+    await trainerPage.getByLabel('Name').fill('Alice Anker')
+    await trainerPage.getByLabel(/Trikotnummer/).fill('7')
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog).toBeHidden()
+    await expect(rows).toHaveCount(1)
+    await expect(rows.nth(0)).toContainText('Alice Anker')
+    await expect(rows.nth(0)).toContainText('7')
+
+    // Create player B with jersey #9.
+    await trainerPage.getByTestId('player-new-button').click()
+    await trainerPage.getByLabel('Name').fill('Bruno Bereit')
+    await trainerPage.getByLabel(/Trikotnummer/).fill('9')
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog).toBeHidden()
+    await expect(rows).toHaveCount(2)
+
+    // Edit (rename) player B and confirm the change is reflected.
+    const bRow = rows.filter({ hasText: 'Bruno Bereit' })
+    await bRow.getByTestId('player-edit-button').click()
+    await expect(playerDialog).toBeVisible()
+    const nameInput = trainerPage.getByLabel('Name')
+    await expect(nameInput).toHaveValue('Bruno Bereit')
+    await nameInput.fill('Bruno Bereit II')
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog).toBeHidden()
+    await expect(rows.filter({ hasText: 'Bruno Bereit II' })).toHaveCount(1)
+
+    // Active-jersey-uniqueness violation: editing Bruno to jersey #7 (Alice's active number) must be rejected.
+    const bRowRenamed = rows.filter({ hasText: 'Bruno Bereit II' })
+    await bRowRenamed.getByTestId('player-edit-button').click()
+    await expect(playerDialog).toBeVisible()
+    await trainerPage.getByLabel(/Trikotnummer/).fill('7')
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog.getByRole('alert')).toContainText(/bereits vergeben/i)
+    await expect(playerDialog).toBeVisible()
+    await trainerPage.getByRole('button', { name: 'Schließen' }).click()
+    await expect(playerDialog).toBeHidden()
+    // Bruno keeps his original jersey — the rejected edit was not applied.
+    await expect(rows.filter({ hasText: 'Bruno Bereit II' })).toContainText('9')
+
+    // Consent toggle inline for Alice.
+    const aRow = rows.filter({ hasText: 'Alice Anker' })
+    const consentCheckbox = aRow.locator('input[type="checkbox"]')
+    await expect(consentCheckbox).not.toBeChecked()
+    await consentCheckbox.check()
+    await expect(consentCheckbox).toBeChecked()
+
+    // Deactivate Alice — row stays listed, marked inactive, and "Deaktivieren" disappears.
+    await aRow.getByRole('button', { name: 'Deaktivieren' }).click()
+    await expect(aRow).toContainText('Inaktiv')
+    await expect(aRow.getByRole('button', { name: 'Deaktivieren' })).toHaveCount(0)
+    await expect(rows).toHaveCount(2)
+
+    // Invite CTA opens the team InviteForm pre-filled with role "player".
+    const inviteDialog = trainerPage.getByTestId('player-invite-dialog')
+    await bRowRenamed.getByTestId('player-invite-button').click()
+    await expect(inviteDialog).toBeVisible()
+    await expect(inviteDialog.getByLabel(/rolle/i)).toHaveValue('player')
+    await inviteDialog.getByLabel(/e-mail/i).fill(inviteeEmail)
+    await inviteDialog.getByRole('button', { name: /einladen/i }).click()
+    await expect(inviteDialog).toBeHidden()
+
+    // Invited user accepts and lands in the team's dashboard.
+    const inviteLink = await fetchLatestMagicLink(inviteeEmail)
+    const inviteeCtx = await browser.newContext()
+    const inviteePage = await inviteeCtx.newPage()
+    setupPage(inviteePage)
+    await inviteePage.goto(inviteLink, { waitUntil: 'networkidle' })
+    await expect(inviteePage.getByText(new RegExp(teamName))).toBeVisible({ timeout: 15_000 })
+    await inviteePage.getByRole('button', { name: /annehmen/i }).click()
+    await inviteePage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    // Trainer links the newly accepted member to Bruno's player row. The invitee has no
+    // display name yet, so the candidate dropdown falls back to their user id — with only
+    // one unlinked player-role member in this team, selecting the sole real option is
+    // unambiguous regardless of its label.
+    await trainerPage.reload({ waitUntil: 'networkidle' })
+    const bRowFinal = trainerPage.getByTestId('player-row').filter({ hasText: 'Bruno Bereit II' })
+    await bRowFinal.getByLabel(/Konto für Bruno Bereit II wählen/).selectOption({ index: 1 })
+    await bRowFinal.getByTestId('player-link-button').click()
+    await expect(bRowFinal.getByTestId('player-linked')).toBeVisible({ timeout: 10_000 })
+
+    await trainerCtx.close()
+    await inviteeCtx.close()
+  })
+})
