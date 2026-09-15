@@ -17,18 +17,25 @@ const categories = ref<Cat[]>([])
 const deletable = ref<Record<string, boolean>>({})
 const loading = ref(false)
 const error = ref<string | null>(null)
+let latestLoad = 0
 
 const load = async () => {
+  const loadId = ++latestLoad
+  const teamId = props.teamId
   loading.value = true
   error.value = null
+  categories.value = []
+  deletable.value = {}
   try {
-    categories.value = await listAll(props.teamId)
-    const checks = await Promise.all(categories.value.map((c) => hasEntries(c.id)))
-    deletable.value = Object.fromEntries(categories.value.map((c, i) => [c.id, !checks[i]]))
+    const nextCategories = await listAll(teamId)
+    const checks = await Promise.all(nextCategories.map((c) => hasEntries(c.id)))
+    if (loadId !== latestLoad) return
+    categories.value = nextCategories
+    deletable.value = Object.fromEntries(nextCategories.map((c, i) => [c.id, !checks[i]]))
   } catch (err) {
-    error.value = (err as Error).message
+    if (loadId === latestLoad) error.value = (err as Error).message
   } finally {
-    loading.value = false
+    if (loadId === latestLoad) loading.value = false
   }
 }
 
@@ -68,7 +75,10 @@ const onDelete = async (id: string) => {
   }
 }
 
-defineExpose({ reload: load, count: () => categories.value.length })
+defineExpose({
+  reload: load,
+  maxSortOrder: () => categories.value.reduce((max, category) => Math.max(max, category.sort_order), 0),
+})
 </script>
 
 <template>

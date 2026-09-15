@@ -27,7 +27,7 @@ const dialogSeq = ref(0)
 
 const openCreateDialog = () => {
   editingCategory.value = null
-  nextSortOrder.value = (categoryList.value?.count() ?? 0) + 1
+  nextSortOrder.value = (categoryList.value?.maxSortOrder() ?? 0) + 1
   dialogSeq.value += 1
   dialog.value?.showModal()
 }

@@ -60,14 +60,11 @@ export const useCategories = () => {
   }
 
   const reorder = async (team_id: string, items: { id: string; sort_order: number }[]) => {
-    for (const item of items) {
-      const { error } = await client
-        .from('point_categories')
-        .update({ sort_order: item.sort_order })
-        .eq('id', item.id)
-        .eq('team_id', team_id)
-      if (error) throw error
-    }
+    const { error } = await client.rpc('reorder_point_categories', {
+      p_team: team_id,
+      p_items: items,
+    })
+    if (error) throw error
   }
 
   const hasEntries = async (category_id: string): Promise<boolean> => {

@@ -39,7 +39,12 @@ const valueMin = ref(props.category?.value_min ?? 0)
 const valueMax = ref(props.category?.value_max ?? 5)
 const sortOrder = ref(props.category?.sort_order ?? props.nextSortOrder)
 const active = ref(props.category?.active ?? true)
-const fieldErrors = ref<{ name?: string; value_max?: string; sort_order?: string }>({})
+const fieldErrors = ref<{
+  name?: string
+  value_min?: string
+  value_max?: string
+  sort_order?: string
+}>({})
 const submitError = ref<string | null>(null)
 const loading = ref(false)
 
@@ -57,6 +62,7 @@ const submit = async () => {
     for (const issue_ of parsed.error.issues) {
       const key = issue_.path[0]
       if (key === 'name') fieldErrors.value.name = issue_.message
+      if (key === 'value_min') fieldErrors.value.value_min = issue_.message
       if (key === 'value_max') fieldErrors.value.value_max = issue_.message
       if (key === 'sort_order') fieldErrors.value.sort_order = issue_.message
     }
@@ -100,6 +106,7 @@ const submit = async () => {
           required
           class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
         />
+        <span v-if="fieldErrors.value_min" class="text-sm text-red-700">{{ fieldErrors.value_min }}</span>
       </label>
       <label class="flex-1 block">
         <span class="text-sm font-medium text-neutral-800">Max</span>
