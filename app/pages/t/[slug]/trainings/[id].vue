@@ -169,6 +169,20 @@ const statusLabel = computed(() => (training.value?.status === 'saved' ? 'Gespei
         :categories="categories"
         :initial-entries="initialEntries"
       />
+      <p v-else-if="!players.length" class="text-sm text-neutral-500" data-testid="no-players-hint">
+        Es sind keine aktiven Spieler:innen im Team. Bitte zuerst über
+        <NuxtLink :to="`/t/${slug}/players`" class="underline">Spieler-Verwaltung</NuxtLink>
+        anlegen.
+      </p>
+      <p
+        v-else-if="!categories.length"
+        class="text-sm text-neutral-500"
+        data-testid="no-categories-hint"
+      >
+        Es sind keine aktiven Kategorien im Team. Bitte zuerst über
+        <NuxtLink :to="`/t/${slug}/categories`" class="underline">Kategorien</NuxtLink>
+        anlegen.
+      </p>
 
       <TrainingPhotoUpload
         v-if="teamId"
