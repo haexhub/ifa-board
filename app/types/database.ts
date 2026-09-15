@@ -469,7 +469,10 @@ export type Database = {
       is_member: { Args: { p_team: string }; Returns: boolean }
       is_profile_visible: { Args: { p_profile: string }; Returns: boolean }
       is_trainer: { Args: { p_team: string }; Returns: boolean }
-      reorder_point_categories: { Args: { p_items: Json; p_team: string }; Returns: undefined }
+      reorder_point_categories: {
+        Args: { p_items: Json; p_team: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -605,3 +608,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

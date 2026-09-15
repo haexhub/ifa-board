@@ -135,6 +135,7 @@ export const pointCategories = pgTable(
   },
   (t) => [
     check('point_categories_range_check', sql`${t.valueMax} >= ${t.valueMin}`),
+    uniqueIndex('point_categories_team_name_uniq').on(t.teamId, t.name),
     index('point_categories_team_active_sort_idx').on(t.teamId, t.active, t.sortOrder),
   ],
 )

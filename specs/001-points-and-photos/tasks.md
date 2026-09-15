@@ -248,17 +248,17 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 ### Migrations
 
-- [ ] T094 [US5] Migration `supabase/migrations/20260912100000_public_ranking.sql` — replace placeholder body of `public.get_public_ranking(text, date, date)` with real `SECURITY DEFINER` implementation using a dedicated `public_ranking_reader` role that has minimum `select` grants per [contracts/public-ranking.md](./contracts/public-ranking.md); `grant execute` to `anon, authenticated`
-- [ ] T095 [US5] Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
+- [X] T094 [US5] Migration `supabase/migrations/20260915170000_public_ranking.sql` — replace placeholder body of `public.get_public_ranking(text, date, date)` with real `SECURITY DEFINER` implementation using a dedicated `public_ranking_reader` role that has minimum `select` grants per [contracts/public-ranking.md](./contracts/public-ranking.md); `grant execute` to `anon, authenticated` (filename bumped from the task's original `20260912100000` to stay after the US3/US4 migrations already on `main`)
+- [X] T095 [US5] Regenerate types via `pnpm gen:types` and commit `app/types/database.ts`
 
 ### Tests for User Story 5
 
-- [ ] T096 [P] [US5] Playwright test `tests/e2e/public-anon.spec.ts` — visit `/public/<seeded-slug>/ranking` without session; verify data shape (jersey + rank + per-category sums only); direct `from('point_entries').select()` as anon returns empty
+- [X] T096 [P] [US5] Playwright test `tests/e2e/public-anon.spec.ts` — visit `/public/<seeded-slug>/ranking` without session; verify data shape (jersey + rank + per-category sums only); direct `from('point_entries').select()` as anon returns empty
 
 ### Implementation for User Story 5
 
-- [ ] T097 [P] [US5] Composable `app/composables/usePublicRanking.ts` — calls `rpc('get_public_ranking', {p_slug, p_from, p_to})` using the anon client
-- [ ] T098 [US5] Page `app/pages/public/[slug]/ranking.vue` — uses `layouts/public.vue`; renders a `RankingTable` variant that shows only jersey + rank + category sums; `TimeframePicker` bound to `usePublicRanking`; null jersey rendered as "—"
+- [X] T097 [P] [US5] Composable `app/composables/usePublicRanking.ts` — calls `rpc('get_public_ranking', {p_slug, p_from, p_to})` using the anon client
+- [X] T098 [US5] Page `app/pages/public/[slug]/ranking.vue` — uses `layouts/public.vue`; renders a `RankingTable` variant that shows only jersey + rank + category sums; `TimeframePicker` bound to `usePublicRanking`; null jersey rendered as "—"
 
 **Checkpoint**: US5 complete.
 
