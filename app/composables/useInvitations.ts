@@ -6,7 +6,12 @@ export const useInvitations = () => {
   const client = useSupabaseClient<Database>()
   const user = useSupabaseUser()
 
-  const issue = async (payload: { team_id: string; email: string; role: Role }) => {
+  const issue = async (payload: {
+    team_id: string
+    email: string
+    role: Role
+    player_id?: string
+  }) => {
     return await $fetch<{ id: string }>('/api/invitations/issue', {
       method: 'POST',
       body: payload,

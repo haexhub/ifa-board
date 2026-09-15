@@ -1,0 +1,1 @@
+ALTER TABLE "invitations" ADD CONSTRAINT "invitations_player_id_role_check" CHECK ("invitations"."player_id" is null or "invitations"."role" = 'player');

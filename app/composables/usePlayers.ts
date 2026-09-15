@@ -13,6 +13,8 @@ export type Player = ActivePlayer & {
   linked_user_id: string | null
 }
 
+export type LinkCandidate = { user_id: string; display_name: string | null }
+
 export const usePlayers = () => {
   const client = useSupabaseClient<Database>()
 
@@ -95,6 +97,34 @@ export const usePlayers = () => {
     await update(id, { photo_consent: value })
   }
 
+  const listLinkCandidates = async (team_id: string): Promise<LinkCandidate[]> => {
+    const { data: memberships, error: memErr } = await client
+      .from('memberships')
+      .select('user_id')
+      .eq('team_id', team_id)
+      .eq('role', 'player')
+    if (memErr) throw memErr
+    if (!memberships?.length) return []
+
+    const { data: linkedRows, error: linkedErr } = await client
+      .from('players')
+      .select('linked_user_id')
+      .eq('team_id', team_id)
+      .not('linked_user_id', 'is', null)
+    if (linkedErr) throw linkedErr
+    const linkedIds = new Set((linkedRows ?? []).map((r) => r.linked_user_id as string))
+
+    const unlinkedIds = memberships.map((m) => m.user_id).filter((id) => !linkedIds.has(id))
+    if (unlinkedIds.length === 0) return []
+
+    const { data: profiles, error: profErr } = await client
+      .from('user_profiles')
+      .select('id, display_name')
+      .in('id', unlinkedIds)
+    if (profErr) throw profErr
+    return (profiles ?? []).map((p) => ({ user_id: p.id, display_name: p.display_name }))
+  }
+
   const linkUser = async (id: string, user_id: string) => {
     const { data: player, error: playerErr } = await client
       .from('players')
@@ -118,5 +148,5 @@ export const usePlayers = () => {
     if (error) throw error
   }
 
-  return { listActive, list, create, update, setActive, setConsent, linkUser }
+  return { listActive, list, create, update, setActive, setConsent, linkUser, listLinkCandidates }
 }
