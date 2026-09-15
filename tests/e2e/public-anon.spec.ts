@@ -160,6 +160,9 @@ test.describe('US5 — anonymous public ranking', () => {
     // Direct anon REST access to the underlying table is denied (RLS) —
     // no session cookie, plain anon apikey, exactly what a public visitor's
     // browser could attempt.
+    if (!SUPABASE_ANON_KEY) {
+      throw new Error('SUPABASE_ANON_KEY missing — required to assert anonymous REST denial')
+    }
     const directRes = await anonCtx.request.get(`${SUPABASE_URL}/rest/v1/point_entries?select=*`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
     })

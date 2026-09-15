@@ -146,6 +146,7 @@ Constraints / indexes:
 
 Indexes:
 
+- `create unique index point_categories_team_name_uniq on point_categories(team_id, name);`
 - `create index point_categories_team_active_sort_idx on point_categories(team_id, active, sort_order);`
 
 ## trainings

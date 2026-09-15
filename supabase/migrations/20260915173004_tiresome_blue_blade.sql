@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "point_categories_team_name_uniq" ON "point_categories" USING btree ("team_id","name");
