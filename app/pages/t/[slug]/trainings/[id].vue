@@ -57,20 +57,32 @@ const load = async (): Promise<TrainingDetailData> => {
   // observable *change* during hydration, a `watch`-based refetch never
   // fires to correct it. RLS already scopes `get(trainingId)` correctly, so
   // no team_id is needed to fetch the training itself in the first place.
-  const [t, es, photoRows] = await Promise.all([
-    get(trainingId),
-    listEntries(trainingId),
-    listPhotos(trainingId),
-  ])
+  const [t, es] = await Promise.all([get(trainingId), listEntries(trainingId)])
   if (!t) {
-    return { training: null, players: [], categories: [], entries: es, photos: photoRows, consentStatus: 'clean' }
+    return {
+      training: null,
+      players: [],
+      categories: [],
+      entries: es,
+      photos: [],
+      consentStatus: 'blocked',
+    }
   }
   const [ps, cs, cStatus] = await Promise.all([
     listPlayers(t.team_id),
     listCategories(t.team_id),
     deriveConsentStatus(t.team_id),
   ])
-  return { training: t, players: ps, categories: cs, entries: es, photos: photoRows, consentStatus: cStatus }
+  const maySeePhotos = isTrainer.value || cStatus === 'clean'
+  const photoRows = maySeePhotos ? await listPhotos(trainingId) : []
+  return {
+    training: t,
+    players: ps,
+    categories: cs,
+    entries: es,
+    photos: photoRows,
+    consentStatus: cStatus,
+  }
 }
 
 const {

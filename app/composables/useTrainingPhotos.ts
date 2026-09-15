@@ -122,6 +122,7 @@ export const useTrainingPhotos = () => {
   const deriveConsentStatus = async (team_id: string): Promise<ConsentStatus> => {
     const { listActive } = usePlayers()
     const players = await listActive(team_id)
+    if (players.length === 0) return 'blocked'
     return players.every((p) => p.photo_consent) ? 'clean' : 'blocked'
   }
 
