@@ -48,11 +48,18 @@ export const useProfile = () => {
       .upload(path, file, { contentType: file.type })
     if (uploadError) throw uploadError
 
-    const { data: before } = await client
+    const { data: before, error: readError } = await client
       .from('user_profiles')
       .select('avatar_path')
       .eq('id', uid)
       .single()
+    if (readError) {
+      await client.storage
+        .from('avatars')
+        .remove([path])
+        .catch(() => undefined)
+      throw readError
+    }
     const previousPath = before?.avatar_path ?? null
 
     const { error: updateError } = await client
@@ -79,11 +86,12 @@ export const useProfile = () => {
     const uid = user.value?.id
     if (!uid) throw new Error('Nicht angemeldet')
 
-    const { data: before } = await client
+    const { data: before, error: readError } = await client
       .from('user_profiles')
       .select('avatar_path')
       .eq('id', uid)
       .single()
+    if (readError) throw readError
     const previousPath = before?.avatar_path ?? null
     if (!previousPath) return
 

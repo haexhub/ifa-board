@@ -1,13 +1,20 @@
 import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { Database } from '~/types/database'
 import { useUserDb, schema } from '~/server/utils/db'
 
 export default defineEventHandler(async (event) => {
-  const targetUserId = getRouterParam(event, 'user_id')
-  if (!targetUserId) {
+  const rawTargetUserId = getRouterParam(event, 'user_id')
+  if (!rawTargetUserId) {
     throw createError({ statusCode: 400, statusMessage: 'Missing user_id' })
   }
+
+  const parsedTargetUserId = z.string().uuid().safeParse(rawTargetUserId)
+  if (!parsedTargetUserId.success) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid user_id' })
+  }
+  const targetUserId = parsedTargetUserId.data
 
   // useUserDb throws 401 if there's no session. Running the lookup inside it
   // (role=authenticated + the caller's own JWT claims) means the existing

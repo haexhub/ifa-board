@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm'
 import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 import type { Database } from '~/types/database'
 import { useAdminDb, schema } from '~/server/utils/db'
+import { displayNameSchema } from '~/utils/validators'
 
 const bodySchema = z.object({
   target_user_id: z.string().uuid(),
@@ -54,7 +55,8 @@ export default defineEventHandler(async (event) => {
         statusMessage: getUserErr?.message ?? 'Target user not found',
       })
     }
-    const defaultName = targetUser.user.email.split('@')[0]
+    const parsedDefaultName = displayNameSchema.safeParse(targetUser.user.email.split('@')[0])
+    const defaultName = parsedDefaultName.success ? parsedDefaultName.data : target_user_id
     await db
       .update(schema.userProfiles)
       .set({ displayName: defaultName })
