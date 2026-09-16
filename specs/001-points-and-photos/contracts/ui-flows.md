@@ -96,6 +96,9 @@ Identical to Round 1 in shape, but all IDs are team-scoped:
 
 - Grid rows = players **where team_id = current team & active**.
 - Columns = active categories **where team_id = current team**.
+- "+ Kategorie hinzufügen" opens the same create dialog as S7, scoped to the
+  current team; on save the category list reloads and the grid gains a
+  column immediately, no navigation away from S1.
 - Photo upload writes to `training-photos/<team_id>/<training_id>/<uuid>.ext`.
 - Consent banner lists no-consent players of the current team.
 - Auto-save per cell; "Speichern" transitions status to `saved`.

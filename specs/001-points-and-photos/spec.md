@@ -211,6 +211,11 @@ Deploy oder eine Code-Änderung nötig ist.
 3. **Given** eine Kategorie hat historische Einträge, **When** der Trainer
    versucht sie zu löschen, **Then** ist Löschen nicht möglich; nur
    Deaktivieren wird angeboten.
+4. **Given** der Trainer legt ein neues Training an, **When** er direkt im
+   Formular "+ Kategorie hinzufügen" wählt, Name "Fairness", Wertebereich
+   0–5 setzt und speichert, **Then** erscheint "Fairness" sofort als neue
+   Spalte im aktuellen Erfassungsformular, ohne dass die Kategorienseite
+   separat aufgerufen werden muss.
 
 ---
 
@@ -305,9 +310,10 @@ Foto-URLs schlägt fehl.
 
 - **Kein aktiver Kader**: Wenn kein Spieler aktiv ist, blockt "Neues Training"
   mit dem Hinweis, dass zuerst mindestens ein Spieler angelegt werden muss.
-- **Keine aktive Kategorie**: Wenn keine Kategorie aktiv ist, blockt "Neues
-  Training" mit dem Hinweis, dass zuerst mindestens eine Kategorie angelegt
-  werden muss.
+- **Keine aktive Kategorie**: Wenn keine Kategorie aktiv ist, zeigt "Neues
+  Training" einen Hinweis und bietet direkt im Formular eine Aktion an, um
+  eine Kategorie anzulegen — ohne dass die Kategorienseite separat
+  aufgerufen werden muss.
 - **Spieler nicht anwesend**: Wenn der Trainer für einen Spieler keinen Wert
   einträgt, wird das als "nicht bewertet" gespeichert (kein Nullpunkt).
   Solche Trainings zählen für diesen Spieler nicht in Durchschnitt/Median.

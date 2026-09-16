@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import CategoryForm from '~/components/categories/CategoryForm.vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
 import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
@@ -33,6 +34,29 @@ const title = ref('')
 const date = ref(isoToday)
 
 const canSave = computed(() => !!training.value && !isSaving.value)
+
+const categoryDialog = ref<HTMLDialogElement | null>(null)
+const categoryDialogSeq = ref(0)
+const nextCategorySortOrder = ref(1)
+const categoriesError = ref<string | null>(null)
+
+const openCategoryDialog = () => {
+  nextCategorySortOrder.value =
+    categories.value.reduce((max, c) => Math.max(max, c.sort_order), 0) + 1
+  categoryDialogSeq.value += 1
+  categoryDialog.value?.showModal()
+}
+
+const onCategorySaved = async () => {
+  categoryDialog.value?.close()
+  categoriesError.value = null
+  try {
+    categories.value = await listCategories(teamId.value)
+  } catch (err) {
+    categoriesError.value =
+      err instanceof Error ? err.message : 'Kategorien konnten nicht aktualisiert werden'
+  }
+}
 
 const {
   data: initialData,
@@ -142,6 +166,19 @@ const onSave = async () => {
 
     <ConsentWarningBanner :players="players" />
 
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-neutral-900">Kategorien</h2>
+      <button
+        type="button"
+        data-testid="training-new-category-button"
+        class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-50"
+        @click="openCategoryDialog"
+      >
+        + Kategorie hinzufügen
+      </button>
+    </div>
+    <p v-if="categoriesError" class="text-sm text-red-700" role="alert">{{ categoriesError }}</p>
+
     <TrainingPointGrid
       v-if="training && players.length && categories.length"
       :training-id="training.id"
@@ -158,10 +195,37 @@ const onSave = async () => {
       class="text-sm text-neutral-500"
       data-testid="no-categories-hint"
     >
-      Es sind keine aktiven Kategorien im Team. Bitte zuerst über
-      <NuxtLink :to="`/t/${slug}/categories`" class="underline">Kategorien</NuxtLink>
-      anlegen.
+      Es sind keine aktiven Kategorien im Team. Über „+ Kategorie hinzufügen" oben kannst du
+      direkt eine anlegen.
     </p>
+
+    <dialog
+      ref="categoryDialog"
+      data-testid="training-category-dialog"
+      class="rounded-lg p-0 backdrop:bg-black/40 w-full max-w-md"
+    >
+      <div class="p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-neutral-900">Neue Kategorie</h2>
+          <button
+            type="button"
+            aria-label="Schließen"
+            class="text-neutral-500 hover:text-neutral-900"
+            @click="categoryDialog?.close()"
+          >
+            ✕
+          </button>
+        </div>
+        <CategoryForm
+          v-if="teamId"
+          :key="categoryDialogSeq"
+          :team-id="teamId"
+          :next-sort-order="nextCategorySortOrder"
+          :category="null"
+          @saved="onCategorySaved"
+        />
+      </div>
+    </dialog>
 
     <TrainingPhotoUpload
       v-if="training && teamId"
