@@ -17,7 +17,7 @@ const schema = z.object({
 })
 
 const { issue } = useInvitations()
-const { create } = usePlayers()
+const { create, remove } = usePlayers()
 
 const email = ref('')
 const role = ref<'trainer' | 'player'>(props.defaultRole ?? 'player')
@@ -56,6 +56,7 @@ const submit = async () => {
   }
 
   loading.value = true
+  let createdPlayerId: string | null = null
   try {
     let player_id: string | undefined
     if (wantsPlayerRow) {
@@ -67,6 +68,7 @@ const submit = async () => {
         active: true,
       })
       player_id = created.id
+      createdPlayerId = created.id
     }
     const res = await issue({
       team_id: props.teamId,
@@ -80,6 +82,13 @@ const submit = async () => {
     jerseyNumber.value = null
     position.value = ''
   } catch (err) {
+    if (createdPlayerId) {
+      try {
+        await remove(createdPlayerId)
+      } catch {
+        // Keep the original invitation error visible; cleanup can be retried manually.
+      }
+    }
     const e = err as { code?: string; statusCode?: number; statusMessage?: string; message?: string }
     if (e.code === '23505') {
       submitError.value =

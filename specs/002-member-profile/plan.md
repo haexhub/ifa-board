@@ -11,9 +11,10 @@ page. The display name already exists (`user_profiles.display_name`,
 currently derived from the email and read-only); this feature makes it
 self-editable and adds an avatar. Trainers can reset (not edit) a teammate's
 name or avatar if it's inappropriate. Reuses the existing photo-upload
-pattern (`training-photos` bucket, `PHOTO_MIME_TYPES`/`PHOTO_MAX_BYTES`,
-signed URLs) for the new `avatars` bucket, and the existing
-`is_profile_visible` RLS helper for read access — no new visibility model.
+validation (`PHOTO_MIME_TYPES`/`PHOTO_MAX_BYTES`) for the new private
+`avatars` bucket, and uses one authenticated avatar-download endpoint that
+rechecks `is_profile_visible` on every request — no bearer URLs or new
+visibility model.
 
 ## Technical Context
 
@@ -35,7 +36,7 @@ Constitution v1.0.0 ([`.specify/memory/constitution.md`](../../.specify/memory/c
 
 | Principle | Gate | Status |
 |---|---|---|
-| **I. Simplicity First** (NON-NEGOTIABLE) | No new abstraction/service; reuse existing patterns where one already fits. | ✅ Pass. Reuses the `training-photos` upload pattern (`PHOTO_MIME_TYPES`, `PHOTO_MAX_BYTES`, signed-URL read) for the new `avatars` bucket instead of inventing new upload machinery; reuses `is_profile_visible` for read visibility instead of a new helper; self-service edits go through the plain Supabase browser client (no new server route), matching the existing "no custom API route when the built-in client can express the query" rule. Only one new server route is added, and only because it needs `service_role` (cross-user write + storage object deletion) — see [research.md](./research.md). |
+| **I. Simplicity First** (NON-NEGOTIABLE) | No new abstraction/service; reuse existing patterns where one already fits. | ✅ Pass. Reuses the `training-photos` upload validation (`PHOTO_MIME_TYPES`, `PHOTO_MAX_BYTES`) for the new `avatars` bucket instead of inventing new upload machinery; reuses `is_profile_visible` for read authorization; avatar bytes are streamed through one authenticated download route so each request rechecks access. Self-service edits otherwise go through the plain Supabase browser client. Only the moderation route needs `service_role` (cross-user write + storage object deletion) — see [research.md](./research.md). |
 | **II. Role-Based Access via Supabase RLS** (NON-NEGOTIABLE) | Every table/bucket has RLS + policy; cross-account access denied by policy, not app logic. | ✅ Pass. New `user_profiles_update_self` policy scoped to `auth.uid() = id`. New `avatars` bucket policies: read via `is_profile_visible`, write scoped to the caller's own `<user_id>/` prefix. Trainer-reset path never grants a trainer direct RLS write access to another member's row — it goes through a `service_role` server route that itself re-validates the trainer/team relationship server-side before acting (see [contracts/rls-policies.md](./contracts/rls-policies.md)). |
 | **III. Konfigurierbare Punktekategorien** | N/A — feature does not touch point categories. | ✅ N/A |
 | **IV. Mobile-First UX** | `/profile` usable on ≥360px portrait; ≥44px touch targets. | ✅ Pass. Reuses existing `min-h-touch` input/button classes already used throughout the app. |
@@ -69,13 +70,14 @@ app/
 │   └── profile/
 │       └── ProfileForm.vue           # name input + avatar upload/remove, reuses TrainingPhotoUpload's picker pattern
 ├── composables/
-│   └── useProfile.ts                 # get own profile, update name, upload/remove avatar, signed avatar URL
+│   └── useProfile.ts                 # get own profile, update name, upload/remove avatar, authenticated avatar URL
 ├── pages/
 │   └── profile.vue                   # team-independent; no team-context middleware, just the global auth requirement
 ├── components/team/
 │   └── MembershipTable.vue           # + "Avatar zurücksetzen" / "Namen zurücksetzen" row actions (trainer-only, US4)
 ├── server/api/profile/
-│   └── moderate.post.ts              # trainer-only, service_role: re-validates shared-team+trainer, resets name and/or removes avatar (storage + DB)
+│   ├── moderate.post.ts              # trainer-only, service_role: re-validates shared-team+trainer, resets name and/or removes avatar (storage + DB)
+│   └── avatar/[user_id].get.ts       # authenticated, per-request visibility check, streams private avatar bytes
 └── types/database.ts                 # regenerated (avatar_path column)
 
 db/schema/index.ts                    # userProfiles: + avatarPath column

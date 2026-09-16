@@ -89,6 +89,11 @@ export const usePlayers = () => {
     if (error) throw error
   }
 
+  const remove = async (id: string) => {
+    const { error } = await client.from('players').delete().eq('id', id)
+    if (error) throw error
+  }
+
   const setActive = async (id: string, value: boolean) => {
     await update(id, { active: value })
   }
@@ -148,5 +153,5 @@ export const usePlayers = () => {
     if (error) throw error
   }
 
-  return { listActive, list, create, update, setActive, setConsent, linkUser, listLinkCandidates }
+  return { listActive, list, create, update, remove, setActive, setConsent, linkUser, listLinkCandidates }
 }

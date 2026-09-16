@@ -8,7 +8,13 @@ Delta against [specs/001-points-and-photos/contracts/rls-policies.md](../../001-
 create policy user_profiles_update_self on public.user_profiles for update
   to authenticated
   using (auth.uid() = id)
-  with check (auth.uid() = id);
+  with check (
+    auth.uid() = id
+    and (
+      avatar_path is null
+      or avatar_path like (auth.uid()::text || '/%')
+    )
+  );
 ```
 
 Combined with the existing `user_profiles_read_team` select policy, a
@@ -21,7 +27,9 @@ hand-written migration, since it's plain column DDL):
 ```sql
 alter table public.user_profiles
   add constraint user_profiles_display_name_len_check
-  check (length(trim(display_name)) >= 2);
+  check (
+    length(trim(regexp_replace(display_name, '[\\u200B-\\u200D\\uFEFF]', '', 'g'))) >= 2
+  );
 ```
 
 ## Storage bucket `avatars`
@@ -67,10 +75,12 @@ verify the caller in Drizzle first, then act with
   `target_user_id` to the same email-derived default the sync trigger
   would produce (`split_part(email, '@', 1)`), read via
   `serverSupabaseServiceRole().auth.admin.getUserById`.
-- `field: 'avatar'` → read the current `avatar_path` for `target_user_id`;
-  if set, remove the object via
-  `serverSupabaseServiceRole().storage.from('avatars').remove([path])`,
-  then set `avatar_path = null`.
+- `field: 'avatar'` → set `avatar_path = null` first, then remove the old
+  object via `serverSupabaseServiceRole().storage.from('avatars').remove([path])`.
+  A missing object is a successful, idempotent retry. If the database update
+  fails, leave the object and reference intact. If storage cleanup fails after
+  the update, retry cleanup without restoring a database reference to a
+  deleted object.
 - Either action is a no-op returning `{ ok: true }` if there was nothing to
   reset (US4 Acceptance Scenario 3) — never an error for "already at
   default."
@@ -89,3 +99,13 @@ One more Playwright spec case alongside the existing
 | N2 | Trainer of Team A | `POST /api/profile/moderate` targeting a member of Team B only | 403 (no shared team) |
 | N3 | Member (any role) | `update user_profiles set display_name = ... where id <> auth.uid()` directly via PostgREST | Denied (RLS) |
 | N4 | Member (any role) | upload to `avatars/<someone-else's-user_id>/...` | Denied (RLS) |
+| N5 | Unauthenticated client | download an existing `avatars/<user_id>/...` object | Denied (private bucket / no `anon` policy) |
+
+## Authenticated avatar reads
+
+Avatar display MUST use `GET /api/profile/avatar/:user_id`, not a signed URL.
+The route rechecks the caller's session and shared-team visibility on every
+request, reads the target profile's `avatar_path`, and streams the object from
+the private `avatars` bucket without returning a bearer URL. It returns `401`
+without a session, `403` without shared-team visibility, and `404` when the
+profile has no avatar. Responses must not be publicly cached.

@@ -316,6 +316,7 @@ export type Database = {
           last_updated_by: string | null
           name: string
           slug: string
+          timezone: string
         }
         Insert: {
           created_at?: string
@@ -325,6 +326,7 @@ export type Database = {
           last_updated_by?: string | null
           name: string
           slug: string
+          timezone?: string
         }
         Update: {
           created_at?: string
@@ -334,6 +336,7 @@ export type Database = {
           last_updated_by?: string | null
           name?: string
           slug?: string
+          timezone?: string
         }
         Relationships: []
       }

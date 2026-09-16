@@ -8,7 +8,7 @@ Delta against [specs/001-points-and-photos/data-model.md](../001-points-and-phot
 |---|---|---|---|
 | `id` | `uuid` | `primary key references auth.users(id) on delete cascade` | unchanged |
 | `display_name` | `text` | | unchanged column, now also self-writable (see RLS below) |
-| `avatar_path` | `text` | nullable | **new**. Storage object path in the `avatars` bucket, e.g. `<user_id>/<uuid>.<ext>`; `null` = no avatar, show placeholder. Never a public URL — signed URLs are minted on read, same as `training_photos.storage_path`. |
+| `avatar_path` | `text` | nullable | **new**. Storage object path in the `avatars` bucket, e.g. `<user_id>/<uuid>.<ext>`; `null` = no avatar, show placeholder. Never a public URL; reads stream through the authenticated avatar endpoint. |
 
 RLS (delta):
 
@@ -16,11 +16,11 @@ RLS (delta):
   covers `avatar_path` too — row-level policies apply to every column, no
   change needed for FR-007/FR-008.
 - **New** `user_profiles_update_self` (update, authenticated):
-  `using (auth.uid() = id)` / `with check (auth.uid() = id)`. Lets a
-  member write their own `display_name` and `avatar_path`; FR-002a's
-  2-character minimum is enforced client-side (zod) and — belt-and-braces
-  — by a `check` constraint `length(trim(display_name)) >= 2` (mirrors the
-  pattern used for `point_categories`/`players` constraints elsewhere).
+  `using (auth.uid() = id)` plus a `with check` that requires
+  `avatar_path` to be null or start with `<auth.uid()>/`. Lets a member
+  write only their own profile and own avatar path; FR-002a's 2-visible-
+  character minimum is enforced client-side (zod) and by a check constraint
+  that ignores zero-width format characters before applying the length rule.
 - Trainer-driven reset (FR-010/FR-010a) does **not** get its own RLS
   policy — it goes through the `service_role`-only server route described
   in [contracts/rls-policies.md](./contracts/rls-policies.md), which
@@ -38,6 +38,10 @@ previous object is deleted on replace (US2 Scenario 2) or on remove (US3).
 
 No `anon` policy — matches FR-008/SC-005 (no visibility outside shared
 teams).
+
+Avatar downloads are never exposed as signed or public URLs. The authenticated
+`GET /api/profile/avatar/:user_id` route rechecks session and team visibility
+for every request before streaming the private object.
 
 ## Key Entities (spec-level, restated with concrete shape)
 

@@ -25,6 +25,8 @@ declare
   v_accepted_at timestamptz;
   v_slug text;
   v_player_id uuid;
+  v_player_team_id uuid;
+  v_player_linked_user_id uuid;
 begin
   select i.id, i.team_id, i.email, i.role, i.expires_at, i.accepted_at, i.player_id, t.slug
     into v_id, v_team_id, v_email, v_role, v_expires_at, v_accepted_at, v_player_id, v_slug
@@ -48,6 +50,24 @@ begin
 
   if lower(v_email) <> lower(p_user_email) then
     raise exception 'invitation email mismatch' using errcode = 'insufficient_privilege';
+  end if;
+
+  if v_player_id is not null then
+    select p.team_id, p.linked_user_id
+      into v_player_team_id, v_player_linked_user_id
+      from public.players p
+     where p.id = v_player_id
+       for update;
+
+    if not found or v_player_team_id <> v_team_id then
+      raise exception 'invitation player does not belong to invitation team'
+        using errcode = 'check_violation';
+    end if;
+
+    if v_player_linked_user_id is not null and v_player_linked_user_id <> p_user_id then
+      raise exception 'invitation player is already linked to another user'
+        using errcode = 'unique_violation';
+    end if;
   end if;
 
   insert into public.memberships(user_id, team_id, role)

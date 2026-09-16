@@ -33,7 +33,7 @@ const schema = z.object({
   active: z.boolean(),
 })
 
-const { create, update, linkUser, listLinkCandidates } = usePlayers()
+const { create, update, remove, linkUser, listLinkCandidates } = usePlayers()
 const { issue } = useInvitations()
 
 const name = ref(props.player?.name ?? '')
@@ -96,13 +96,23 @@ const submit = async () => {
     }
     inviteEmailParsed = parsedEmail.data
   }
+  if (
+    !props.player &&
+    mode.value === 'link' &&
+    !candidates.value.some((candidate) => candidate.user_id === selectedCandidateId.value)
+  ) {
+    submitError.value = 'Bitte zuerst ein bestehendes Konto auswählen.'
+    return
+  }
   loading.value = true
+  let createdPlayerId: string | null = null
   try {
     if (props.player) {
       await update(props.player.id, parsed.data)
     } else {
       const created = await create(props.teamId, parsed.data)
-      if (mode.value === 'link' && selectedCandidateId.value) {
+      createdPlayerId = created.id
+      if (mode.value === 'link') {
         await linkUser(created.id, selectedCandidateId.value)
       } else if (mode.value === 'invite' && inviteEmailParsed) {
         await issue({
@@ -115,6 +125,13 @@ const submit = async () => {
     }
     emit('saved')
   } catch (err) {
+    if (createdPlayerId) {
+      try {
+        await remove(createdPlayerId)
+      } catch {
+        // Keep the original operation error visible; cleanup can be retried manually.
+      }
+    }
     const e = err as { code?: string; statusCode?: number; statusMessage?: string; message?: string }
     if (e.code === '23505') {
       submitError.value =

@@ -30,13 +30,13 @@ Single Nuxt project (existing). Frontend under `app/`; schema under `db/schema/`
 
 **Purpose**: Schema column, RLS, storage bucket, and the shared profile page/composable skeleton every user story builds on. Blocks all user stories.
 
-- [ ] T001 Add `avatarPath` column (nullable `text`) and a `user_profiles_display_name_len_check` check constraint (`length(trim(display_name)) >= 2`) to the `userProfiles` table in `db/schema/index.ts`, per [data-model.md](./data-model.md)
+- [ ] T001 Add `avatarPath` column (nullable `text`) and a `user_profiles_display_name_len_check` check constraint that requires at least two visible characters (ignoring zero-width format characters) to the `userProfiles` table in `db/schema/index.ts`, per [data-model.md](./data-model.md)
 - [ ] T002 Run `pnpm db:generate` to produce the Drizzle migration for T001's column + constraint
 - [ ] T003 [P] Hand-written migration `supabase/migrations/<ts>_user_profiles_update_self_rls.sql` — `user_profiles_update_self` policy (`auth.uid() = id`, both `using` and `with check`) per [contracts/rls-policies.md](./contracts/rls-policies.md)
 - [ ] T004 [P] Hand-written migration `supabase/migrations/<ts>_avatars_bucket.sql` — private `avatars` bucket (10 MB limit, `PHOTO_MIME_TYPES`) with `avatars_read_team` and `avatars_write_self` policies per [contracts/rls-policies.md](./contracts/rls-policies.md)
 - [ ] T005 Run `pnpm db:reset` to apply T002–T004 locally, then `pnpm gen:types` to regenerate `app/types/database.ts`
-- [ ] T006 [P] Add `displayNameSchema` (min 2 trimmed chars) to `app/utils/validators.ts`
-- [ ] T007 Create `app/composables/useProfile.ts` with `getOwnProfile()` — reads the caller's own `user_profiles` row and returns `{ display_name, avatar_path, avatar_url }`, minting a signed URL (600s TTL, same as `useTrainingPhotos`) when `avatar_path` is set
+- [ ] T006 [P] Add `displayNameSchema` to `app/utils/validators.ts` — normalize and remove zero-width/default-ignorable characters, then require at least two visible characters; add a unit test for two zero-width spaces
+- [ ] T007 Create `app/composables/useProfile.ts` with `getOwnProfile()` — reads the caller's own `user_profiles` row and returns `{ display_name, avatar_path, avatar_url }`, setting `avatar_url` to the authenticated `/api/profile/avatar/:user_id` endpoint when `avatar_path` is set
 - [ ] T008 Create `app/pages/profile.vue` page skeleton — no `team-context` middleware (profile is account-level, not team-scoped), renders the current name/avatar via `useProfile().getOwnProfile()`
 
 **Checkpoint**: `/profile` loads and shows the current (email-derived) name and no-avatar placeholder for a fresh account. No editing yet.
@@ -72,7 +72,7 @@ Single Nuxt project (existing). Frontend under `app/`; schema under `db/schema/`
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add `uploadAvatar(file)` to `app/composables/useProfile.ts` — validates the file against `PHOTO_MIME_TYPES`/`PHOTO_MAX_BYTES` (`app/utils/validators.ts`, same limits as training photos), uploads to `avatars/<uid>/<uuid>.<ext>`, removes the previous object (if any) via `storage.remove`, then updates `avatar_path`
+- [ ] T014 [US2] Add `uploadAvatar(file)` to `app/composables/useProfile.ts` — validates the file against `PHOTO_MIME_TYPES`/`PHOTO_MAX_BYTES` (`app/utils/validators.ts`, same limits as training photos), uploads to `avatars/<uid>/<uuid>.<ext>`, updates `avatar_path`, and only then removes the previous object; if the database update fails, remove the new object and preserve the previous avatar, while treating already-missing cleanup objects as successful retries
 - [ ] T015 [US2] Add the avatar upload control to `app/components/profile/ProfileForm.vue` — file input + picker button, reusing the picker/queue pattern from `app/components/trainings/TrainingPhotoUpload.vue`; show the current avatar (or placeholder) via `avatar_url`
 
 ### Tests for User Story 2
@@ -91,7 +91,7 @@ Single Nuxt project (existing). Frontend under `app/`; schema under `db/schema/`
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] Add `removeAvatar()` to `app/composables/useProfile.ts` — deletes the storage object at the current `avatar_path` and sets it to `null`
+- [ ] T017 [US3] Add `removeAvatar()` to `app/composables/useProfile.ts` — set `avatar_path` to `null` first, then delete the old storage object; if the database update fails, leave the object and reference intact, and treat an already-deleted object as a successful idempotent retry
 - [ ] T018 [US3] Add an "Avatar entfernen" button to `app/components/profile/ProfileForm.vue`, shown only when an avatar is currently set
 
 ### Tests for User Story 3
@@ -110,7 +110,7 @@ Single Nuxt project (existing). Frontend under `app/`; schema under `db/schema/`
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] Create `app/server/api/profile/moderate.post.ts` — validates `{ target_user_id, team_id, field }`; authorizes via Drizzle (`memberships` row for caller with `role = 'trainer'` on `team_id`, AND a `memberships` row for `target_user_id` on the same `team_id`), else `403`; for `field: 'name'` resets `display_name` to the email-derived default via `serverSupabaseServiceRole().auth.admin.getUserById` + Drizzle update; for `field: 'avatar'` removes the storage object (if any) via `serverSupabaseServiceRole().storage.from('avatars').remove([...])` and sets `avatar_path = null`; no-op (not an error) when there's nothing to reset — per [contracts/rls-policies.md](./contracts/rls-policies.md)
+- [ ] T020 [US4] Create `app/server/api/profile/moderate.post.ts` — validates `{ target_user_id, team_id, field }`; authorizes via Drizzle (`memberships` row for caller with `role = 'trainer'` on `team_id`, AND a `memberships` row for `target_user_id` on the same `team_id`), else `403`; for `field: 'name'` resets `display_name` to the email-derived default via `serverSupabaseServiceRole().auth.admin.getUserById` + Drizzle update; for `field: 'avatar'` sets `avatar_path = null` before removing the storage object, treats an already-missing object as a successful retry, and retries cleanup without restoring a deleted reference; no-op (not an error) when there's nothing to reset — per [contracts/rls-policies.md](./contracts/rls-policies.md)
 - [ ] T021 [US4] Add `moderateProfile({ target_user_id, team_id, field })` to `app/composables/useProfile.ts`, calling the T020 route
 - [ ] T022 [US4] Add "Avatar zurücksetzen" / "Namen zurücksetzen" row actions to `app/components/team/MembershipTable.vue`, visible only to trainers, calling T021 and refreshing the row on success
 

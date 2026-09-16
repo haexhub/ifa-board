@@ -8,20 +8,24 @@ Constitution Principle I (Simplicity First: reuse over reinvention).
 ## Decision: Avatar storage reuses the training-photos pattern
 
 **Decision**: New bucket `avatars`, path `<user_id>/<uuid>.<ext>`, same
-`PHOTO_MIME_TYPES` / `PHOTO_MAX_BYTES` (10 MB) limits and signed-URL read
-pattern (`createSignedUrl(path, 600)`) as `training-photos`.
+`PHOTO_MIME_TYPES` / `PHOTO_MAX_BYTES` (10 MB) limits as `training-photos`.
+Avatar reads use `GET /api/profile/avatar/:user_id`, an authenticated download
+endpoint that rechecks the caller's session and shared-team visibility on every
+request before streaming the private object.
 
 **Rationale**: FR-005 needs format/size limits with a clear rejection
 message — `photoFileSchema` in `app/utils/validators.ts` already does
-exactly this and is already tested. `training_photos` already proves the
-signed-URL read model satisfies "not publicly exposed" (FR-008/SC-005).
-Reusing both means zero new validation code and zero new read-access
-pattern to review.
+exactly this and is already tested. Reusing the upload validation and private
+bucket keeps the storage boundary small, while the authenticated endpoint
+avoids the bearer access that a signed URL would grant after its creation.
 
 **Alternatives considered**:
 - *Public bucket, plain URLs*: simpler reads, but violates FR-008 (would
   leak avatars outside the member's teams, e.g. via a leaked URL with no
   expiry) — rejected.
+- *Signed URLs*: the creation request can be protected by RLS, but the
+  resulting bearer URL does not recheck session or team membership on download
+  and can be shared until expiry — rejected.
 - *Separate, avatar-specific MIME/size limits*: no requirement drove a
   different limit; would just be an unjustified extra constant — rejected
   per Simplicity First.
@@ -46,7 +50,8 @@ in the original request.
 the existing browser `@nuxtjs/supabase` client, gated by a new
 `user_profiles_update_self` RLS policy (`auth.uid() = id`) and new
 `avatars` bucket policies (read: `is_profile_visible`; write: caller's own
-`<user_id>/` prefix). US4 (trainer resets a teammate's name/avatar) gets
+`<user_id>/` prefix). Avatar reads use the authenticated download endpoint
+described above. US4 (trainer resets a teammate's name/avatar) gets
 one new route, `app/server/api/profile/moderate.post.ts`, using
 `serverSupabaseServiceRole` — because it must (a) write a row that isn't
 the caller's own and (b) delete a storage object, which RLS alone cannot

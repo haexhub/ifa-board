@@ -23,6 +23,7 @@ export const teams = pgTable('teams', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  timezone: text('timezone').notNull().default('Europe/Berlin'),
   createdBy: uuid('created_by')
     .notNull()
     .references(() => authUsers.id),
@@ -162,11 +163,9 @@ export const trainings = pgTable(
     lastUpdatedBy: uuid('last_updated_by').references(() => authUsers.id),
   },
   (t) => [
-    // +1 day tolerance: `date` is the client's local "today", `current_date`
-    // is evaluated in the DB's (UTC) timezone — without slack, a training
-    // logged just after local midnight in any UTC+ timezone gets rejected
-    // as "future" until the DB's UTC day catches up.
-    check('trainings_date_not_future', sql`${t.date} <= current_date + 1`),
+    // Future-date validation is enforced by the database trigger using the
+    // team's configured IANA timezone; a cross-table CHECK cannot do that
+    // without reintroducing a global UTC-based boundary.
     check('trainings_status_check', sql`${t.status} in ('draft','saved')`),
     index('trainings_team_date_idx').on(t.teamId, t.date.desc()),
   ],
