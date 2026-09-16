@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import InvitationAcceptCard from '~/components/auth/InvitationAcceptCard.vue'
 import LoginMagicLink from '~/components/auth/LoginMagicLink.vue'
 import type { Database } from '~/types/database'

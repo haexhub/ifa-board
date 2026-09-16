@@ -288,14 +288,14 @@ Single Nuxt project. Frontend under `app/`; migrations under `supabase/`; tests 
 
 **Purpose**: Deliver security guarantees (SC-003, SC-008, SC-009), performance targets (SC-001, SC-002, SC-010), deployment readiness, docs.
 
-- [ ] T103 [P] Playwright RLS single-team negative suite `tests/e2e/rls-negative-single-team.spec.ts` implementing rows N1..N6 from [contracts/rls-policies.md](./contracts/rls-policies.md); delivers SC-003
-- [ ] T104 [P] Playwright RLS cross-team negative suite `tests/e2e/rls-negative-cross-team.spec.ts` implementing rows X1..X10; delivers SC-009 and SC-008
-- [ ] T105 [P] Manual perf verification: on 4G-emulated mobile time US0 signup + team-create (SC-010 ≤3 min), US1 flow (SC-001 ≤2 min), US2 dashboard load (SC-002 ≤5 s); record in `specs/001-points-and-photos/perf-notes.md`
-- [ ] T106 [P] Add `vercel.json` at repo root declaring the Nuxt preset and required env vars (`NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`, `NUXT_SUPABASE_SERVICE_ROLE_KEY`); document the Supabase redirect-allowlist requirement
-- [ ] T107 [P] Add `README.md` at repo root — 20-line "How to run" + links to `specs/001-points-and-photos/quickstart.md` and `spec.md`
-- [ ] T108 [P] CI config `.github/workflows/ci.yml` — `pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:e2e` against local Supabase booted in-job
-- [ ] T109 Update `.specify/memory/constitution.md`: close `TODO(DEPLOYMENT_TARGET)` with "Vercel + Supabase Cloud"; note the auth-model change (magic-link only) in the Tech Stack section; bump version to `1.1.0` (MINOR — expanded guidance) with a fresh Sync Impact Report
-- [ ] T110 Page `app/pages/t/[slug]/team/settings.vue` — trainer-only; edit team name + slug (with warning) + season_start; updates `teams` and `team_settings`
+- [X] T103 [P] Playwright RLS single-team negative suite `tests/e2e/rls-negative-single-team.spec.ts` implementing rows N1..N6 from [contracts/rls-policies.md](./contracts/rls-policies.md); delivers SC-003
+- [X] T104 [P] Playwright RLS cross-team negative suite `tests/e2e/rls-negative-cross-team.spec.ts` implementing rows X1..X10; delivers SC-009 and SC-008
+- [X] T105 [P] Manual perf verification: on 4G-emulated mobile time US0 signup + team-create (SC-010 ≤3 min), US1 flow (SC-001 ≤2 min), US2 dashboard load (SC-002 ≤5 s); record in `specs/001-points-and-photos/perf-notes.md`
+- [X] T106 [P] ~~Add `vercel.json`~~ — superseded: deployment target changed to self-hosted (netcup VPS), not Vercel (see [research.md R14](./research.md)). No PaaS config file needed; Nuxt's default `node-server` Nitro preset already produces a portable server. Documented required env vars and the Supabase redirect-allowlist requirement in [quickstart.md](./quickstart.md)
+- [X] T107 [P] Add `README.md` at repo root — 20-line "How to run" + links to `specs/001-points-and-photos/quickstart.md` and `spec.md`
+- [X] T108 [P] CI config `.github/workflows/ci.yml` — `pnpm typecheck && pnpm lint && pnpm test:unit && pnpm test:e2e` against local Supabase booted in-job
+- [X] T109 Update `.specify/memory/constitution.md`: close `TODO(DEPLOYMENT_TARGET)` with self-hosted netcup VPS + Supabase Cloud (not Vercel, per corrected R14); note the auth-model change (magic-link only) in the Tech Stack section; bump version to `1.1.0` (MINOR — expanded guidance) with a fresh Sync Impact Report
+- [X] T110 Page `app/pages/t/[slug]/team/settings.vue` — trainer-only; edit team name + slug (with warning) + season_start; updates `teams` and `team_settings`
 
 ---
 

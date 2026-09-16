@@ -16,6 +16,12 @@ const nuxtGlobals = {
   definePageMeta: 'readonly',
   useTeamContext: 'readonly',
   usePlayers: 'readonly',
+  useAuth: 'readonly',
+  useCategories: 'readonly',
+  useInvitations: 'readonly',
+  useProfile: 'readonly',
+  useTeams: 'readonly',
+  useTeamSettings: 'readonly',
 }
 
 export default [

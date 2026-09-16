@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - run: supabase start
+
+      - run: supabase db reset
+
+      - run: pnpm gen:types
+
+      - name: Write .env from local Supabase status
+        run: |
+          STATUS=$(supabase status -o env)
+          echo "SUPABASE_URL=$(echo "$STATUS" | grep '^API_URL=' | cut -d= -f2-)" >> .env
+          echo "SUPABASE_KEY=$(echo "$STATUS" | grep '^ANON_KEY=' | cut -d= -f2-)" >> .env
+          echo "SUPABASE_SERVICE_KEY=$(echo "$STATUS" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)" >> .env
+          echo "NUXT_SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS" | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2-)" >> .env
+          echo "NUXT_SUPABASE_DB_URL=$(echo "$STATUS" | grep '^DB_URL=' | cut -d= -f2-)" >> .env
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test:unit
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm test:e2e
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

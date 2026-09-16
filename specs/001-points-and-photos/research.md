@@ -247,10 +247,13 @@ research update.
 
 ## R14: Deployment target
 
-- **Decision**: Vercel (Nuxt) + Supabase Cloud (Postgres/Auth/Storage).
-  Closes constitution `TODO(DEPLOYMENT_TARGET)`.
-- **Rationale**: Unchanged from Round 1; multi-tenancy doesn't change
-  the hosting recommendation.
+- **Decision**: Self-hosted on a netcup VPS (Nuxt's default
+  `node-server` Nitro preset, no PaaS) + Supabase Cloud
+  (Postgres/Auth/Storage). Closes constitution
+  `TODO(DEPLOYMENT_TARGET)`.
+- **Rationale**: Owner runs their own netcup server and does not want
+  a third-party PaaS (e.g. Vercel) for the frontend. Reverse-proxy and
+  process-manager specifics are decided at first deploy, not upfront.
 
 ---
 
