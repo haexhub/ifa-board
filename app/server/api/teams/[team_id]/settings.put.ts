@@ -3,6 +3,19 @@ import { z } from 'zod'
 import { useUserDb, schema } from '~/server/utils/db'
 
 const teamIdSchema = z.string().uuid()
+const seasonStartSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const [yearValue, monthValue, dayValue] = value.split('-')
+    if (!yearValue || !monthValue || !dayValue) return false
+    const year = Number(yearValue)
+    const month = Number(monthValue)
+    const day = Number(dayValue)
+    const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+    const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+    return year >= 1 && day >= 1 && day <= (daysInMonth ?? 0)
+  }, 'Invalid season start date')
 
 const bodySchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -12,7 +25,7 @@ const bodySchema = z.object({
     .min(1)
     .max(64)
     .regex(/^[a-z0-9-]+$/),
-  season_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  season_start: seasonStartSchema,
 })
 
 export default defineEventHandler(async (event) => {
@@ -61,6 +74,7 @@ export default defineEventHandler(async (event) => {
     if (error.code === '23505') {
       throw createError({ statusCode: 409, statusMessage: 'Slug already taken' })
     }
-    throw createError({ statusCode: 500, statusMessage: error.message ?? 'Team update failed' })
+    console.error('Failed to update team settings', err)
+    throw createError({ statusCode: 500, statusMessage: 'Team update failed' })
   }
 })
