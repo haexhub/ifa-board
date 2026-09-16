@@ -155,7 +155,7 @@ Indexes:
 |---|---|---|---|
 | `id` | `uuid` | `primary key default gen_random_uuid()` | |
 | `team_id` | `uuid` | `not null references teams(id) on delete cascade` | |
-| `date` | `date` | `not null check (date <= current_date)` | FR-011 no future date |
+| `date` | `date` | `not null`; database trigger compares it with the current date in `teams.timezone` on insert and update | FR-011 no future date |
 | `title` | `text` | | |
 | `note` | `text` | | |
 | `status` | `text` | `not null default 'draft' check (status in ('draft','saved'))` | |

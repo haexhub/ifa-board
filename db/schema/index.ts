@@ -23,6 +23,7 @@ export const teams = pgTable('teams', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  timezone: text('timezone').notNull().default('Europe/Berlin'),
   createdBy: uuid('created_by')
     .notNull()
     .references(() => authUsers.id),
@@ -69,14 +70,19 @@ export const invitations = pgTable(
       .notNull()
       .default(sql`(now() + interval '14 days')`),
     acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    playerId: uuid('player_id').references(() => players.id, { onDelete: 'set null' }),
   },
   (t) => [
     check('invitations_role_check', sql`${t.role} in ('trainer','player')`),
+    check('invitations_player_id_role_check', sql`${t.playerId} is null or ${t.role} = 'player'`),
     uniqueIndex('invitations_team_email_open_uniq')
       .on(t.teamId, sql`lower(${t.email})`)
       .where(sql`${t.acceptedAt} is null`),
     index('invitations_email_open_idx').on(t.email).where(sql`${t.acceptedAt} is null`),
     index('invitations_token_idx').on(t.token),
+    uniqueIndex('invitations_player_open_uniq')
+      .on(t.playerId)
+      .where(sql`${t.acceptedAt} is null and ${t.playerId} is not null`),
   ],
 )
 
@@ -157,7 +163,9 @@ export const trainings = pgTable(
     lastUpdatedBy: uuid('last_updated_by').references(() => authUsers.id),
   },
   (t) => [
-    check('trainings_date_not_future', sql`${t.date} <= current_date`),
+    // Future-date validation is enforced by the database trigger using the
+    // team's configured IANA timezone; a cross-table CHECK cannot do that
+    // without reintroducing a global UTC-based boundary.
     check('trainings_status_check', sql`${t.status} in ('draft','saved')`),
     index('trainings_team_date_idx').on(t.teamId, t.date.desc()),
   ],

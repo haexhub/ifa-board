@@ -42,6 +42,7 @@ export type Database = {
           expires_at: string
           id: string
           invited_by: string
+          player_id: string | null
           role: string
           team_id: string
           token: string
@@ -53,6 +54,7 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by: string
+          player_id?: string | null
           role: string
           team_id: string
           token: string
@@ -64,11 +66,19 @@ export type Database = {
           expires_at?: string
           id?: string
           invited_by?: string
+          player_id?: string | null
           role?: string
           team_id?: string
           token?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invitations_player_id_players_id_fk"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invitations_team_id_teams_id_fk"
             columns: ["team_id"]
@@ -306,6 +316,7 @@ export type Database = {
           last_updated_by: string | null
           name: string
           slug: string
+          timezone: string
         }
         Insert: {
           created_at?: string
@@ -315,6 +326,7 @@ export type Database = {
           last_updated_by?: string | null
           name: string
           slug: string
+          timezone?: string
         }
         Update: {
           created_at?: string
@@ -324,6 +336,7 @@ export type Database = {
           last_updated_by?: string | null
           name?: string
           slug?: string
+          timezone?: string
         }
         Relationships: []
       }

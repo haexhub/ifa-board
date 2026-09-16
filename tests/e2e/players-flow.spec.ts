@@ -89,8 +89,8 @@ test.describe('US4 — trainer manages the player roster', () => {
     // Create player A with jersey #7.
     await trainerPage.getByTestId('player-new-button').click()
     await expect(playerDialog).toBeVisible()
-    await trainerPage.getByLabel('Name').fill('Alice Anker')
-    await trainerPage.getByLabel(/Trikotnummer/).fill('7')
+    await playerDialog.getByLabel('Name').fill('Alice Anker')
+    await playerDialog.getByLabel(/Trikotnummer/).fill('7')
     await trainerPage.getByTestId('player-form-submit').click()
     await expect(playerDialog).toBeHidden()
     await expect(rows).toHaveCount(1)
@@ -99,8 +99,8 @@ test.describe('US4 — trainer manages the player roster', () => {
 
     // Create player B with jersey #9.
     await trainerPage.getByTestId('player-new-button').click()
-    await trainerPage.getByLabel('Name').fill('Bruno Bereit')
-    await trainerPage.getByLabel(/Trikotnummer/).fill('9')
+    await playerDialog.getByLabel('Name').fill('Bruno Bereit')
+    await playerDialog.getByLabel(/Trikotnummer/).fill('9')
     await trainerPage.getByTestId('player-form-submit').click()
     await expect(playerDialog).toBeHidden()
     await expect(rows).toHaveCount(2)
@@ -109,7 +109,7 @@ test.describe('US4 — trainer manages the player roster', () => {
     const bRow = rows.filter({ hasText: 'Bruno Bereit' })
     await bRow.getByTestId('player-edit-button').click()
     await expect(playerDialog).toBeVisible()
-    const nameInput = trainerPage.getByLabel('Name')
+    const nameInput = playerDialog.getByLabel('Name')
     await expect(nameInput).toHaveValue('Bruno Bereit')
     await nameInput.fill('Bruno Bereit II')
     await trainerPage.getByTestId('player-form-submit').click()
@@ -120,7 +120,7 @@ test.describe('US4 — trainer manages the player roster', () => {
     const bRowRenamed = rows.filter({ hasText: 'Bruno Bereit II' })
     await bRowRenamed.getByTestId('player-edit-button').click()
     await expect(playerDialog).toBeVisible()
-    await trainerPage.getByLabel(/Trikotnummer/).fill('7')
+    await playerDialog.getByLabel(/Trikotnummer/).fill('7')
     await trainerPage.getByTestId('player-form-submit').click()
     await expect(playerDialog.getByRole('alert')).toContainText(/bereits vergeben/i)
     await expect(playerDialog).toBeVisible()
@@ -184,6 +184,183 @@ test.describe('US4 — trainer manages the player roster', () => {
     const unlinkedBruno = trainerPage.getByTestId('player-row').filter({ hasText: 'Bruno Bereit II' })
     await expect(unlinkedBruno.getByTestId('player-linked')).toHaveCount(0)
     await expect(unlinkedBruno.getByLabel(/Konto für Bruno Bereit II wählen/)).toHaveCount(0)
+
+    await trainerCtx.close()
+    await inviteeCtx.close()
+  })
+
+  test('new-player form links an invited-but-unlinked account in one step', async ({ browser }) => {
+    test.setTimeout(120_000)
+    const suffix = uniqueSuffix()
+    const trainerEmail = `trainer-cand-${suffix}@example.com`
+    const inviteeEmail = `player-cand-${suffix}@example.com`
+    const teamName = `Cand Team ${suffix}`
+    const teamSlug = `cand-team-${suffix}`
+
+    const trainerCtx = await browser.newContext()
+    const trainerPage = await trainerCtx.newPage()
+    setupPage(trainerPage)
+
+    await signInWithMagicLink(trainerPage, trainerEmail)
+    await trainerPage.waitForURL(/\/start$/, { timeout: 15_000 })
+    await trainerPage.getByLabel(/team-name/i).fill(teamName)
+    await trainerPage.getByLabel(/slug/i).fill(teamSlug)
+    await trainerPage.getByRole('button', { name: /team gründen/i }).click()
+    await trainerPage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    await trainerPage.getByTestId('player-new-button').click()
+    const playerDialog = trainerPage.getByTestId('player-dialog')
+    await expect(playerDialog).toBeVisible()
+    // No player-role member has accepted an invite yet — no candidate picker.
+    await expect(playerDialog.getByTestId('player-form-candidate-select')).toHaveCount(0)
+    await trainerPage.getByRole('button', { name: 'Schließen' }).click()
+    await expect(playerDialog).toBeHidden()
+
+    // Invite a player and have them accept — this creates an unlinked membership.
+    // (The players page only offers a per-row "Einladen" CTA once a player row
+    // exists; with none yet, use the general team-members invite form instead.)
+    await trainerPage.goto(`/t/${teamSlug}/team/members`, { waitUntil: 'networkidle' })
+    await trainerPage.getByLabel(/e-mail/i).fill(inviteeEmail)
+    await trainerPage.getByLabel(/rolle/i).selectOption('player')
+    await trainerPage.getByRole('button', { name: /einladen/i }).click()
+
+    const inviteLink = await fetchLatestMagicLink(inviteeEmail)
+    const inviteeCtx = await browser.newContext()
+    const inviteePage = await inviteeCtx.newPage()
+    setupPage(inviteePage)
+    await inviteePage.goto(inviteLink, { waitUntil: 'networkidle' })
+    await expect(inviteePage.getByText(new RegExp(teamName))).toBeVisible({ timeout: 15_000 })
+    await inviteePage.getByRole('button', { name: /annehmen/i }).click()
+    await inviteePage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    // Now the new-player form offers the invited account directly.
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    await trainerPage.getByTestId('player-new-button').click()
+    await expect(playerDialog).toBeVisible()
+    await playerDialog.getByRole('radio', { name: 'Bestehendes Konto verknüpfen' }).check()
+    const candidateSelect = playerDialog.getByTestId('player-form-candidate-select')
+    await expect(candidateSelect).toBeVisible()
+    await candidateSelect.selectOption({ index: 1 })
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog).toBeHidden()
+
+    const row = trainerPage.getByTestId('player-row')
+    await expect(row).toHaveCount(1)
+    await expect(row.getByTestId('player-linked')).toBeVisible()
+
+    await trainerCtx.close()
+    await inviteeCtx.close()
+  })
+
+  test('new-player form invites a not-yet-existing account and auto-links it on acceptance', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000)
+    const suffix = uniqueSuffix()
+    const trainerEmail = `trainer-inv-${suffix}@example.com`
+    const inviteeEmail = `player-inv-${suffix}@example.com`
+    const teamName = `Inv Team ${suffix}`
+    const teamSlug = `inv-team-${suffix}`
+
+    const trainerCtx = await browser.newContext()
+    const trainerPage = await trainerCtx.newPage()
+    setupPage(trainerPage)
+
+    await signInWithMagicLink(trainerPage, trainerEmail)
+    await trainerPage.waitForURL(/\/start$/, { timeout: 15_000 })
+    await trainerPage.getByLabel(/team-name/i).fill(teamName)
+    await trainerPage.getByLabel(/slug/i).fill(teamSlug)
+    await trainerPage.getByRole('button', { name: /team gründen/i }).click()
+    await trainerPage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    await trainerPage.getByTestId('player-new-button').click()
+    const playerDialog = trainerPage.getByTestId('player-dialog')
+    await expect(playerDialog).toBeVisible()
+
+    // No candidates exist yet — the "link existing account" option isn't offered.
+    await expect(playerDialog.getByRole('radio', { name: 'Bestehendes Konto verknüpfen' })).toHaveCount(0)
+
+    await playerDialog.getByRole('radio', { name: 'Per E-Mail einladen' }).check()
+    await playerDialog.getByLabel('Name').fill('Nina Neuling')
+    await playerDialog.getByLabel(/Trikotnummer/).fill('11')
+    await playerDialog.getByTestId('player-form-invite-email').fill(inviteeEmail)
+    await trainerPage.getByTestId('player-form-submit').click()
+    await expect(playerDialog).toBeHidden()
+
+    // Player row exists immediately, not yet linked (invite still pending).
+    const row = trainerPage.getByTestId('player-row').filter({ hasText: 'Nina Neuling' })
+    await expect(row).toHaveCount(1)
+    await expect(row.getByTestId('player-linked')).toHaveCount(0)
+
+    // Invitee accepts — the pre-created player row links automatically, no
+    // manual "Verknüpfen" step needed.
+    const inviteLink = await fetchLatestMagicLink(inviteeEmail)
+    const inviteeCtx = await browser.newContext()
+    const inviteePage = await inviteeCtx.newPage()
+    setupPage(inviteePage)
+    await inviteePage.goto(inviteLink, { waitUntil: 'networkidle' })
+    await expect(inviteePage.getByText(new RegExp(teamName))).toBeVisible({ timeout: 15_000 })
+    await inviteePage.getByRole('button', { name: /annehmen/i }).click()
+    await inviteePage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    const linkedRow = trainerPage.getByTestId('player-row').filter({ hasText: 'Nina Neuling' })
+    await expect(linkedRow.getByTestId('player-linked')).toBeVisible({ timeout: 10_000 })
+
+    await trainerCtx.close()
+    await inviteeCtx.close()
+  })
+
+  test('team-members invite form also creates + auto-links a player when a name is given', async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000)
+    const suffix = uniqueSuffix()
+    const trainerEmail = `trainer-mem-${suffix}@example.com`
+    const inviteeEmail = `player-mem-${suffix}@example.com`
+    const teamName = `Mem Team ${suffix}`
+    const teamSlug = `mem-team-${suffix}`
+
+    const trainerCtx = await browser.newContext()
+    const trainerPage = await trainerCtx.newPage()
+    setupPage(trainerPage)
+
+    await signInWithMagicLink(trainerPage, trainerEmail)
+    await trainerPage.waitForURL(/\/start$/, { timeout: 15_000 })
+    await trainerPage.getByLabel(/team-name/i).fill(teamName)
+    await trainerPage.getByLabel(/slug/i).fill(teamSlug)
+    await trainerPage.getByRole('button', { name: /team gründen/i }).click()
+    await trainerPage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/team/members`, { waitUntil: 'networkidle' })
+    // Role defaults to "player" — the optional roster fields are already visible.
+    await trainerPage.getByLabel(/e-mail/i).first().fill(inviteeEmail)
+    await trainerPage.getByLabel('Name').fill('Malik Muster')
+    await trainerPage.getByLabel(/Trikotnummer/).fill('23')
+    await trainerPage.getByRole('button', { name: /einladen/i }).click()
+    await expect(trainerPage.getByText(inviteeEmail)).toBeVisible({ timeout: 10_000 })
+
+    // Player row was created immediately, not yet linked.
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    const row = trainerPage.getByTestId('player-row').filter({ hasText: 'Malik Muster' })
+    await expect(row).toHaveCount(1)
+    await expect(row).toContainText('23')
+    await expect(row.getByTestId('player-linked')).toHaveCount(0)
+
+    const inviteLink = await fetchLatestMagicLink(inviteeEmail)
+    const inviteeCtx = await browser.newContext()
+    const inviteePage = await inviteeCtx.newPage()
+    setupPage(inviteePage)
+    await inviteePage.goto(inviteLink, { waitUntil: 'networkidle' })
+    await expect(inviteePage.getByText(new RegExp(teamName))).toBeVisible({ timeout: 15_000 })
+    await inviteePage.getByRole('button', { name: /annehmen/i }).click()
+    await inviteePage.waitForURL(new RegExp(`/t/${teamSlug}(/|$)`), { timeout: 15_000 })
+
+    await trainerPage.goto(`/t/${teamSlug}/players`, { waitUntil: 'networkidle' })
+    const linkedRow = trainerPage.getByTestId('player-row').filter({ hasText: 'Malik Muster' })
+    await expect(linkedRow.getByTestId('player-linked')).toBeVisible({ timeout: 10_000 })
 
     await trainerCtx.close()
     await inviteeCtx.close()

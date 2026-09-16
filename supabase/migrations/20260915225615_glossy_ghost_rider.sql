@@ -1,0 +1,2 @@
+ALTER TABLE "trainings" DROP CONSTRAINT "trainings_date_not_future";--> statement-breakpoint
+ALTER TABLE "trainings" ADD CONSTRAINT "trainings_date_not_future" CHECK ("trainings"."date" <= current_date + 1) NOT VALID;

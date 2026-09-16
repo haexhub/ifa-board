@@ -9,6 +9,7 @@ const bodySchema = z.object({
   team_id: z.string().uuid(),
   email: z.string().trim().toLowerCase().email(),
   role: z.enum(['trainer', 'player']),
+  player_id: z.string().uuid().optional(),
 })
 
 const generateToken = () => randomBytes(24).toString('base64url')
@@ -21,7 +22,11 @@ export default defineEventHandler(async (event) => {
   if (!parsed.success) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid payload' })
   }
-  const { team_id, email, role } = parsed.data
+  const { team_id, email, role, player_id } = parsed.data
+
+  if (player_id && role !== 'player') {
+    throw createError({ statusCode: 400, statusMessage: 'player_id requires role "player"' })
+  }
 
   const db = useAdminDb()
 
@@ -33,6 +38,17 @@ export default defineEventHandler(async (event) => {
 
   if (!caller || caller.role !== 'trainer') {
     throw createError({ statusCode: 403, statusMessage: 'Only trainers of the team may invite' })
+  }
+
+  if (player_id) {
+    const [player] = await db
+      .select({ teamId: schema.players.teamId })
+      .from(schema.players)
+      .where(eq(schema.players.id, player_id))
+      .limit(1)
+    if (!player || player.teamId !== team_id) {
+      throw createError({ statusCode: 400, statusMessage: 'player_id does not belong to team_id' })
+    }
   }
 
   const token = generateToken()
@@ -59,6 +75,7 @@ export default defineEventHandler(async (event) => {
           role,
           token,
           invitedBy: user.id,
+          playerId: player_id,
         })
         .returning({ id: schema.invitations.id })
       if (!inserted) throw new Error('Invitation insert returned no row')

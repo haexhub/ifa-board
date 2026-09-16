@@ -1,0 +1,3 @@
+ALTER TABLE "invitations" ADD COLUMN "player_id" uuid;--> statement-breakpoint
+ALTER TABLE "invitations" ADD CONSTRAINT "invitations_player_id_players_id_fk" FOREIGN KEY ("player_id") REFERENCES "public"."players"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "invitations_player_open_uniq" ON "invitations" USING btree ("player_id") WHERE "invitations"."accepted_at" is null and "invitations"."player_id" is not null;
