@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   PHOTO_MAX_BYTES,
+  displayNameSchema,
   extensionForMime,
   photoFileSchema,
   pointValueSchema,
@@ -87,6 +88,42 @@ describe('trainingDateSchema', () => {
   it('rejects malformed strings', () => {
     expect(trainingDateSchema.safeParse('12/04/2026').success).toBe(false)
     expect(trainingDateSchema.safeParse('2026-4-5').success).toBe(false)
+  })
+})
+
+describe('displayNameSchema', () => {
+  it('accepts a normal 2+ character name', () => {
+    const parsed = displayNameSchema.safeParse('Al')
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data).toBe('Al')
+  })
+
+  it('trims surrounding whitespace', () => {
+    const parsed = displayNameSchema.safeParse('  Alex  ')
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data).toBe('Alex')
+  })
+
+  it('rejects an empty string', () => {
+    expect(displayNameSchema.safeParse('').success).toBe(false)
+  })
+
+  it('rejects whitespace-only input', () => {
+    expect(displayNameSchema.safeParse('   ').success).toBe(false)
+  })
+
+  it('rejects a single character', () => {
+    expect(displayNameSchema.safeParse('A').success).toBe(false)
+  })
+
+  it('rejects two zero-width spaces as if they were empty', () => {
+    expect(displayNameSchema.safeParse('​​').success).toBe(false)
+  })
+
+  it('still accepts a 2-character name padded with zero-width characters', () => {
+    const parsed = displayNameSchema.safeParse('​Al​')
+    expect(parsed.success).toBe(true)
+    if (parsed.success) expect(parsed.data).toBe('Al')
   })
 })
 
