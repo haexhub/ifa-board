@@ -61,7 +61,7 @@ export const trainingDateSchema = z
 // Matches the DB check constraint (user_profiles_display_name_len_check):
 // zero-width characters don't count as visible, so a name made only of them
 // must still be rejected as too short.
-const ZERO_WIDTH_CHARS = /[​-‍﻿]/g
+const ZERO_WIDTH_CHARS = /[\u200B-\u200D\uFEFF]/g
 
 export const displayNameSchema = z
   .string()

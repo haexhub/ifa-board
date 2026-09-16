@@ -1,36 +1,23 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (initial) → 1.0.0
-Bump rationale: Initial ratification of the ifa-board constitution.
+Version change: 1.0.0 → 1.1.0
+Bump rationale: Expanded guidance — closed the deployment-target TODO and
+documented the passwordless auth model. No principle text changed.
 
-Modified principles: N/A (initial adoption of 5 principles)
+Modified principles: none
 
-Added sections:
-- Core Principles (I. Simplicity First, II. Role-Based Access via Supabase RLS,
-  III. Konfigurierbare Punktekategorien, IV. Mobile-First UX,
-  V. Type Safety End-to-End)
-- Technology Stack & Constraints
-- Development Workflow
-- Governance
+Added sections: none
 
 Removed sections: none
 
 Templates requiring updates:
-- .specify/templates/plan-template.md ⚠ pending — the "Constitution Check" section
-  is a generic placeholder; when the first feature plan is generated it MUST be
-  populated with concrete gates derived from Principles I–V. No structural change
-  to the template file itself is required at this time.
-- .specify/templates/spec-template.md ✅ aligned — no principle-specific fields
-  required.
-- .specify/templates/tasks-template.md ✅ aligned — no principle-driven task
-  category changes required (testing tasks remain OPTIONAL per template).
-- .claude/skills/speckit-*/SKILL.md ✅ aligned — no agent-specific guidance
-  conflicts with the new principles.
+- .specify/templates/plan-template.md ✅ aligned — no change required.
+- .specify/templates/spec-template.md ✅ aligned — no change required.
+- .specify/templates/tasks-template.md ✅ aligned — no change required.
+- .claude/skills/speckit-*/SKILL.md ✅ aligned — no change required.
 
-Follow-up TODOs:
-- TODO(DEPLOYMENT_TARGET): Frontend hosting target is currently placeholder
-  (Vercel/Netlify candidates); decide before the first production deploy.
+Follow-up TODOs: none
 -->
 
 # ifa-board Constitution
@@ -109,6 +96,8 @@ data-access mistakes. The compiler is the cheapest place to catch them.
 - **Languages**: UI copy in German. Code, commit messages, technical
   documentation (including this constitution and all spec/plan/task
   artifacts) in English.
+- **Auth**: Passwordless (OTP magic-link) only via Supabase Auth;
+  password login is disabled in the Supabase project config.
 - **Photos**: Stored in Supabase Storage buckets; access governed by RLS
   policies consistent with Principle II.
 - **Database migrations**: MUST be authored as Supabase migrations, versioned
@@ -117,9 +106,9 @@ data-access mistakes. The compiler is the cheapest place to catch them.
 - **Rendering mode**: SPA rendering is acceptable when it simplifies the
   authentication story; SSR-only features SHOULD NOT be adopted if they
   complicate auth without a proportional benefit.
-- **Deployment**: TODO(DEPLOYMENT_TARGET) — frontend hosting target
-  (Vercel/Netlify likely candidates) to be decided before first production
-  deploy. Supabase Cloud is the intended backend host.
+- **Deployment**: Self-hosted on a netcup VPS, running Nuxt's default
+  `node-server` Nitro build behind a reverse proxy — no third-party PaaS.
+  Supabase Cloud is the backend host.
 
 ## Development Workflow
 
@@ -165,4 +154,4 @@ Amendments to this constitution require:
 Runtime development guidance for AI agents lives in `CLAUDE.md` at the
 repository root.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-10
+**Version**: 1.1.0 | **Ratified**: 2026-09-10 | **Last Amended**: 2026-09-16

@@ -13,5 +13,10 @@ export const useTeamSettings = () => {
     return data
   }
 
-  return { get }
+  const update = async (team_id: string, payload: { season_start: string }) => {
+    const { error } = await client.from('team_settings').update(payload).eq('team_id', team_id)
+    if (error) throw error
+  }
+
+  return { get, update }
 }

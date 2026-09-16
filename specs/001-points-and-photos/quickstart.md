@@ -31,9 +31,11 @@ pnpm gen:types             # writes app/types/database.ts
 # 5. Set environment variables
 cp .env.example .env
 # Values printed by `supabase start` fill:
-#   NUXT_PUBLIC_SUPABASE_URL
-#   NUXT_PUBLIC_SUPABASE_ANON_KEY
-#   NUXT_SUPABASE_SERVICE_ROLE_KEY   (server-only)
+#   SUPABASE_URL
+#   SUPABASE_KEY
+#   SUPABASE_SERVICE_KEY
+#   NUXT_SUPABASE_SERVICE_ROLE_KEY   (server-only, mirrors SUPABASE_SERVICE_KEY)
+#   SUPABASE_DB_URL / NUXT_SUPABASE_DB_URL   (Postgres connection for Drizzle)
 
 # 6. Run dev server
 pnpm dev                   # http://localhost:3000
@@ -75,21 +77,23 @@ Playwright config boots the dev server, resets the DB, and seeds two
 teams (A and B) with a trainer and player each — for the cross-team
 RLS negative suite (SC-009).
 
-## Deploying to production (Vercel + Supabase Cloud)
+## Deploying to production (self-hosted + Supabase Cloud)
 
 Outline (not part of the MVP task list):
 
 1. `supabase link --project-ref <ref>`; `supabase db push` to apply
    migrations to Cloud.
-2. On Vercel, create a project pointing at this repo; set
-   `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `NUXT_SUPABASE_SERVICE_ROLE_KEY` env vars.
-3. First deploy: `main` → production, PRs → preview URLs (share the
-   Cloud DB in v1).
-4. Configure Supabase Auth → Email → disable password login, enable
+2. `pnpm build` produces a portable Node server at
+   `.output/server/index.mjs` (Nuxt's default `node-server` preset —
+   no extra config needed). Run it on the target VPS (e.g. via
+   `systemd` or a process manager) and put it behind a reverse proxy
+   (nginx/Caddy) for TLS; set `SUPABASE_URL`, `SUPABASE_KEY`,
+   `NUXT_SUPABASE_SERVICE_ROLE_KEY`, `NUXT_SUPABASE_DB_URL` env vars
+   on the host.
+3. Configure Supabase Auth → Email → disable password login, enable
    magic-link, set the `redirectTo` URL allowlist to include the
-   production and preview origins.
-5. Set the SMTP for magic-link email in Supabase (or use the built-in
+   production origin.
+4. Set the SMTP for magic-link email in Supabase (or use the built-in
    free tier).
 
 ## Common commands

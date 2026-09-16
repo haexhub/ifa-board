@@ -21,6 +21,11 @@ export const useTeams = () => {
     })
   }
 
+  const update = async (team_id: string, payload: { name?: string; slug?: string }) => {
+    const { error } = await client.from('teams').update(payload).eq('id', team_id)
+    if (error) throw error
+  }
+
   const myTeams = async (): Promise<MyTeam[]> => {
     if (!user.value) return []
     const { data, error } = await client
@@ -31,5 +36,5 @@ export const useTeams = () => {
     return (data ?? []) as MyTeam[]
   }
 
-  return { createTeam, myTeams }
+  return { createTeam, update, myTeams }
 }
