@@ -427,14 +427,17 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          avatar_path: string | null
           display_name: string | null
           id: string
         }
         Insert: {
+          avatar_path?: string | null
           display_name?: string | null
           id: string
         }
         Update: {
+          avatar_path?: string | null
           display_name?: string | null
           id?: string
         }

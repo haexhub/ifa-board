@@ -1,0 +1,2 @@
+ALTER TABLE "user_profiles" ADD COLUMN "avatar_path" text;--> statement-breakpoint
+ALTER TABLE "user_profiles" ADD CONSTRAINT "user_profiles_display_name_len_check" CHECK (length(trim(regexp_replace("user_profiles"."display_name", '[\u200B-\u200D\uFEFF]', '', 'g'))) >= 2);

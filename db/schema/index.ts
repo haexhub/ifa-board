@@ -86,12 +86,22 @@ export const invitations = pgTable(
   ],
 )
 
-export const userProfiles = pgTable('user_profiles', {
-  id: uuid('id')
-    .primaryKey()
-    .references(() => authUsers.id, { onDelete: 'cascade' }),
-  displayName: text('display_name'),
-})
+export const userProfiles = pgTable(
+  'user_profiles',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    displayName: text('display_name'),
+    avatarPath: text('avatar_path'),
+  },
+  (t) => [
+    check(
+      'user_profiles_display_name_len_check',
+      sql`length(trim(regexp_replace(${t.displayName}, '[\\u200B-\\u200D\\uFEFF]', '', 'g'))) >= 2`,
+    ),
+  ],
+)
 
 export const players = pgTable(
   'players',

@@ -58,6 +58,16 @@ export const trainingDateSchema = z
     return value <= isoToday
   }, 'Datum darf nicht in der Zukunft liegen')
 
+// Matches the DB check constraint (user_profiles_display_name_len_check):
+// zero-width characters don't count as visible, so a name made only of them
+// must still be rejected as too short.
+const ZERO_WIDTH_CHARS = /[​-‍﻿]/g
+
+export const displayNameSchema = z
+  .string()
+  .transform((value) => value.replace(ZERO_WIDTH_CHARS, '').trim())
+  .refine((value) => value.length >= 2, 'Name muss mindestens 2 Zeichen haben.')
+
 export const extensionForMime = (mime: string): string => {
   switch (mime) {
     case 'image/jpeg':
