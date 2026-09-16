@@ -104,8 +104,10 @@ test.describe('T110 — team settings page', () => {
     const newName = `Settings Team ${suffix} Renamed`
     await trainerPage.getByTestId('team-settings-name-input').fill(newName)
     await trainerPage.getByTestId('team-settings-season-start-input').fill('2026-03-01')
-    await trainerPage.getByTestId('team-settings-submit').click()
-    await expect(trainerPage.getByTestId('team-settings-form')).toBeVisible()
+    const submitButton = trainerPage.getByTestId('team-settings-submit')
+    await submitButton.click()
+    await expect(submitButton).toBeDisabled()
+    await expect(submitButton).toBeEnabled()
     await trainerPage.reload({ waitUntil: 'networkidle' })
     await expect(trainerPage.getByTestId('team-settings-name-input')).toHaveValue(newName)
     await expect(trainerPage.getByTestId('team-settings-season-start-input')).toHaveValue(

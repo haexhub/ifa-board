@@ -306,6 +306,7 @@ test.describe('RLS negative — cross team (SC-008, SC-009)', () => {
       team_name: string | null
     }
     expect(x9Body.team_name).toBe(teamBName)
+    expect(x9Body.rows.length).toBeGreaterThan(0)
     for (const row of x9Body.rows) {
       expect(Object.keys(row).sort()).toEqual(['jersey_number', 'rank_position', 'scores'])
     }

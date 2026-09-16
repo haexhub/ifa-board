@@ -24,8 +24,7 @@ const schema = z.object({
   season_start: z.string().min(1, 'Bitte Saisonstart wählen.'),
 })
 
-const { update: updateTeam } = useTeams()
-const { update: updateSettings } = useTeamSettings()
+const { updateWithSettings } = useTeams()
 
 const name = ref(props.name)
 const slug = ref(props.slug)
@@ -53,12 +52,16 @@ const submit = async () => {
   }
   loading.value = true
   try {
-    await updateTeam(props.teamId, { name: parsed.data.name, slug: parsed.data.slug })
-    await updateSettings(props.teamId, { season_start: parsed.data.season_start })
+    await updateWithSettings(props.teamId, parsed.data)
     emit('saved', { slug: parsed.data.slug })
   } catch (err) {
-    const e = err as { code?: string; statusCode?: number; statusMessage?: string; message?: string }
-    if (e.code === '23505') {
+    const e = err as {
+      code?: string
+      statusCode?: number
+      statusMessage?: string
+      message?: string
+    }
+    if (e.code === '23505' || e.statusCode === 409) {
       fieldErrors.value.slug = 'Dieser Slug ist bereits vergeben.'
     } else {
       submitError.value = e.statusMessage ?? e.message ?? 'Einstellungen konnten nicht gespeichert werden.'

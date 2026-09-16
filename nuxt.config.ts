@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-09-01',
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NUXT_DEVTOOLS === 'true' },
   ssr: true,
 
   modules: ['@nuxtjs/supabase', '@nuxtjs/tailwindcss'],

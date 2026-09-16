@@ -92,7 +92,9 @@ Outline (not part of the MVP task list):
    on the host.
 3. Configure Supabase Auth → Email → disable password login, enable
    magic-link, set the `redirectTo` URL allowlist to include the
-   production origin.
+   production origin and the exact callback URL, for example
+   `https://<production-host>/callback`. Keep the origin entry if it is used
+   by other flows; add every other exact `redirectTo` URL separately.
 4. Set the SMTP for magic-link email in Supabase (or use the built-in
    free tier).
 

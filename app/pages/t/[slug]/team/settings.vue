@@ -37,6 +37,7 @@ const onSaved = async ({ slug }: { slug: string }) => {
 
     <TeamSettingsForm
       v-if="teamId && currentTeam && settings"
+      :key="teamId"
       :team-id="teamId"
       :name="currentTeam.name"
       :slug="currentTeam.slug"

@@ -51,9 +51,11 @@ Dev-server (`pnpm dev`) measurement, for reference/contrast:
 
 ## Conclusion
 
-All three success criteria meet budget **when served from a production
-build**. No code changes made as part of this verification. Two
-follow-ups worth tracking separately (not part of this Polish pass):
+SC-010 and SC-002 meet budget when served from a production build. SC-001's
+measured system overhead is below budget, but the full success criterion is
+unverified because realistic human data-entry time was excluded. No code
+changes made as part of this verification. Two follow-ups worth tracking
+separately (not part of this Polish pass):
 
 1. SC-001 has not been verified with a real human's data-entry speed —
    only automation/network overhead is measured here.

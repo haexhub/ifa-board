@@ -22,8 +22,24 @@ export const useTeams = () => {
   }
 
   const update = async (team_id: string, payload: { name?: string; slug?: string }) => {
-    const { error } = await client.from('teams').update(payload).eq('id', team_id)
+    const { data, error } = await client
+      .from('teams')
+      .update(payload)
+      .eq('id', team_id)
+      .select('id')
+      .single()
     if (error) throw error
+    return data
+  }
+
+  const updateWithSettings = async (
+    team_id: string,
+    payload: { name: string; slug: string; season_start: string },
+  ) => {
+    return await $fetch<{ slug: string }>(`/api/teams/${team_id}/settings`, {
+      method: 'PUT',
+      body: payload,
+    })
   }
 
   const myTeams = async (): Promise<MyTeam[]> => {
@@ -36,5 +52,5 @@ export const useTeams = () => {
     return (data ?? []) as MyTeam[]
   }
 
-  return { createTeam, update, myTeams }
+  return { createTeam, update, updateWithSettings, myTeams }
 }
