@@ -41,28 +41,28 @@ defineExpose({ reload: load })
 
 <template>
   <div class="space-y-3">
-    <h3 class="text-sm font-semibold text-neutral-900">Offene Einladungen</h3>
-    <p v-if="loading" class="text-sm text-neutral-500">Lade…</p>
-    <p v-else-if="error" class="text-sm text-red-700" role="alert">{{ error }}</p>
-    <p v-else-if="invitations.length === 0" class="text-sm text-neutral-500">
+    <h3 class="text-sm font-semibold text-foreground">Offene Einladungen</h3>
+    <p v-if="loading" class="text-sm text-muted-foreground">Lade…</p>
+    <p v-else-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
+    <p v-else-if="invitations.length === 0" class="text-sm text-muted-foreground">
       Keine offenen Einladungen.
     </p>
-    <ul v-else class="divide-y border rounded bg-white">
-      <li v-for="inv in invitations" :key="inv.id" class="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between p-3">
-        <div class="text-sm">
-          <p class="font-medium text-neutral-900">{{ inv.email }}</p>
-          <p class="text-neutral-500">
-            Rolle: {{ inv.role === 'trainer' ? 'Trainer' : 'Spieler' }} · gültig bis
-            {{ new Date(inv.expires_at).toLocaleDateString('de-DE') }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="min-h-touch px-3 rounded border border-red-300 text-red-700 text-sm hover:bg-red-50"
-          @click="remove(inv.id)"
-        >
-          Widerrufen
-        </button>
+    <ul v-else class="space-y-2">
+      <li v-for="inv in invitations" :key="inv.id">
+        <ShadcnCard class="py-3">
+          <ShadcnCardContent class="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-3">
+            <div class="text-sm">
+              <p class="font-medium text-foreground">{{ inv.email }}</p>
+              <p class="text-muted-foreground">
+                Rolle: {{ inv.role === 'trainer' ? 'Trainer' : 'Spieler' }} · gültig bis
+                {{ new Date(inv.expires_at).toLocaleDateString('de-DE') }}
+              </p>
+            </div>
+            <ShadcnButton type="button" variant="destructive" size="sm" @click="remove(inv.id)">
+              Widerrufen
+            </ShadcnButton>
+          </ShadcnCardContent>
+        </ShadcnCard>
       </li>
     </ul>
   </div>
