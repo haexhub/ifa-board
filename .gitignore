@@ -40,3 +40,4 @@ supabase/.temp/
 # Vercel
 .vercel/
 .playwright-mcp/
+.worktrees/
