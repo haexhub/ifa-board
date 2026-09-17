@@ -19,81 +19,61 @@ const totalFor = (row: RankingRow): number =>
 </script>
 
 <template>
-  <div class="overflow-x-auto rounded border border-neutral-200 bg-white">
-    <table class="w-full text-sm border-collapse" data-testid="ranking-table">
-      <thead class="bg-neutral-100">
-        <tr>
-          <th class="sticky left-0 bg-neutral-100 border-b border-r border-neutral-200 px-3 py-2 text-left font-semibold">
-            #
-          </th>
-          <th class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">
-            Spieler:in
-          </th>
-          <th
-            v-for="c in cats"
-            :key="c.id"
-            class="border-b border-neutral-200 px-3 py-2 text-right font-semibold whitespace-nowrap"
-          >
-            {{ c.name }}
-          </th>
-          <th class="border-b border-neutral-200 px-3 py-2 text-right font-semibold">
-            Gesamt
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-if="!rows.length">
-          <td
-            :colspan="cats.length + 3"
-            class="px-3 py-6 text-center text-neutral-500"
-            data-testid="ranking-empty"
-          >
-            Keine Punkte im gewählten Zeitraum.
-          </td>
-        </tr>
-        <tr
-          v-for="row in rows"
-          :key="row.player_id"
-          class="align-middle"
-          :class="{ 'bg-amber-50': row.player_id === highlightPlayerId }"
-          :data-testid="`ranking-row-${row.player_id}`"
-        >
-          <th
-            scope="row"
-            class="sticky left-0 bg-inherit border-b border-r border-neutral-200 px-3 py-2 text-left font-medium"
-          >
+  <ShadcnTable class="rounded-lg border" data-testid="ranking-table">
+    <ShadcnTableHeader>
+      <ShadcnTableRow class="hover:bg-transparent">
+        <ShadcnTableHead class="sticky left-0 bg-card border-r"> # </ShadcnTableHead>
+        <ShadcnTableHead>Spieler:in</ShadcnTableHead>
+        <ShadcnTableHead v-for="c in cats" :key="c.id" class="text-right whitespace-nowrap">
+          {{ c.name }}
+        </ShadcnTableHead>
+        <ShadcnTableHead class="text-right">Gesamt</ShadcnTableHead>
+      </ShadcnTableRow>
+    </ShadcnTableHeader>
+    <ShadcnTableBody>
+      <ShadcnTableEmpty
+        v-if="!rows.length"
+        :colspan="cats.length + 3"
+        data-testid="ranking-empty"
+      >
+        Keine Punkte im gewählten Zeitraum.
+      </ShadcnTableEmpty>
+      <ShadcnTableRow
+        v-for="row in rows"
+        :key="row.player_id"
+        :class="{ 'bg-warning/15 hover:bg-warning/20': row.player_id === highlightPlayerId }"
+        :data-testid="`ranking-row-${row.player_id}`"
+      >
+        <th scope="row" class="sticky left-0 bg-inherit border-r px-2 py-2 text-left">
+          <ShadcnBadge :variant="row.rank_position <= 3 ? 'default' : 'secondary'">
             {{ row.rank_position }}
-          </th>
-          <td class="border-b border-neutral-200 px-3 py-2">
-            <NuxtLink
-              v-if="linkPlayers"
-              :to="`/t/${slug}/players/${row.player_id}`"
-              class="underline"
-            >
-              <span class="text-neutral-500 mr-1">
-                {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
-              </span>
-              {{ row.name }}
-            </NuxtLink>
-            <template v-else>
-              <span class="text-neutral-500 mr-1">
-                {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
-              </span>
-              {{ row.name }}
-            </template>
-          </td>
-          <td
-            v-for="c in cats"
-            :key="c.id"
-            class="border-b border-neutral-200 px-3 py-2 text-right tabular-nums"
+          </ShadcnBadge>
+        </th>
+        <ShadcnTableCell>
+          <NuxtLink
+            v-if="linkPlayers"
+            :to="`/t/${slug}/players/${row.player_id}`"
+            class="underline"
           >
-            {{ scoreFor(row, c.id) }}
-          </td>
-          <td class="border-b border-neutral-200 px-3 py-2 text-right font-semibold tabular-nums">
-            {{ totalFor(row) }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+            <span class="text-muted-foreground mr-1">
+              {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
+            </span>
+            {{ row.name }}
+          </NuxtLink>
+          <template v-else>
+            <span class="text-muted-foreground mr-1">
+              {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
+            </span>
+            {{ row.name }}
+          </template>
+        </ShadcnTableCell>
+        <ShadcnTableCell v-for="c in cats" :key="c.id" class="text-right tabular-nums">
+          {{ scoreFor(row, c.id) }}
+        </ShadcnTableCell>
+        <ShadcnTableCell class="text-right font-semibold tabular-nums">
+          {{ totalFor(row) }}
+        </ShadcnTableCell>
+      </ShadcnTableRow>
+    </ShadcnTableBody>
+  </ShadcnTable>
 </template>

@@ -6,7 +6,13 @@ export default defineNuxtConfig({
   devtools: { enabled: process.env.NUXT_DEVTOOLS === 'true' },
   ssr: true,
 
+  extends: ['@haex-space/ui'],
+
   modules: ['@nuxtjs/supabase'],
+
+  build: {
+    transpile: ['reka-ui'],
+  },
 
   vite: {
     plugins: [tailwindcss()],

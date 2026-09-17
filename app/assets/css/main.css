@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "@haex-space/ui/assets/css/theme.css";
 
 @source "../../components";
 @source "../../layouts";
@@ -7,6 +9,20 @@
 @source "../../composables";
 @source "../../app.vue";
 @source "../../error.vue";
+@source "../../../node_modules/@haex-space/ui/components";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --primary: oklch(0.6 0.15 145);
+  --primary-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.6 0.15 145 / 0.5);
+}
+.dark {
+  --primary: oklch(0.72 0.16 145);
+  --primary-foreground: oklch(0.145 0 0);
+  --ring: oklch(0.72 0.16 145 / 0.5);
+}
 
 @utility min-h-touch {
   min-height: 44px;
@@ -16,11 +32,14 @@
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   html {
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply antialiased;
+    @apply antialiased bg-background text-foreground;
   }
   button,
   [role='button'],

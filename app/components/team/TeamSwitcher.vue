@@ -27,7 +27,7 @@ const onChange = async (event: Event) => {
     <span class="sr-only">Team wechseln</span>
     <select
       :value="currentSlug ?? ''"
-      class="min-h-touch px-2 rounded border border-neutral-300 bg-white text-sm"
+      class="min-h-touch px-2 rounded-md border border-input bg-background text-sm"
       @change="onChange"
     >
       <option v-for="opt in options" :key="opt.slug" :value="opt.slug">
@@ -35,7 +35,7 @@ const onChange = async (event: Event) => {
       </option>
     </select>
   </label>
-  <span v-else-if="options.length === 1" class="text-sm text-neutral-700 truncate">
+  <span v-else-if="options.length === 1" class="text-sm text-muted-foreground truncate">
     {{ options[0]!.name }}
   </span>
 </template>
