@@ -85,9 +85,11 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
 
 <template>
   <section class="space-y-6" data-testid="dashboard-page">
-    <header class="space-y-1">
-      <h1 class="text-2xl font-semibold text-neutral-900">{{ currentTeam?.name ?? 'Team' }}</h1>
-      <p class="text-neutral-600">{{ isTrainer ? 'Trainer-Ansicht' : 'Spieler-Ansicht' }}</p>
+    <header class="space-y-1.5">
+      <h1 class="text-2xl font-semibold text-foreground">{{ currentTeam?.name ?? 'Team' }}</h1>
+      <ShadcnBadge variant="secondary">
+        {{ isTrainer ? 'Trainer-Ansicht' : 'Spieler-Ansicht' }}
+      </ShadcnBadge>
     </header>
 
     <TimeframePicker
@@ -101,104 +103,79 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
     />
 
     <template v-if="!isTrainer">
-      <div
-        v-if="myRow"
-        class="rounded border border-neutral-200 bg-white p-4 flex items-center justify-between gap-4"
-        data-testid="my-rank-card"
+      <ShadcnCard v-if="myRow" data-testid="my-rank-card">
+        <ShadcnCardContent class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm text-muted-foreground">Dein Platz</p>
+            <p class="text-3xl font-semibold text-foreground">
+              {{ myRow.rank_position }}
+            </p>
+          </div>
+          <ShadcnButton v-if="linkedPlayerId" as-child variant="outline" size="sm">
+            <NuxtLink :to="`/t/${slug}/players/${linkedPlayerId}`"> Mein Zeitverlauf </NuxtLink>
+          </ShadcnButton>
+        </ShadcnCardContent>
+      </ShadcnCard>
+      <p
+        v-else-if="linkedPlayerId"
+        class="text-sm text-muted-foreground"
+        data-testid="my-rank-missing"
       >
-        <div>
-          <p class="text-sm text-neutral-500">Dein Platz</p>
-          <p class="text-3xl font-semibold text-neutral-900">
-            {{ myRow.rank_position }}
-          </p>
-        </div>
-        <NuxtLink
-          v-if="linkedPlayerId"
-          :to="`/t/${slug}/players/${linkedPlayerId}`"
-          class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-        >
-          Mein Zeitverlauf
-        </NuxtLink>
-      </div>
-      <p v-else-if="linkedPlayerId" class="text-sm text-neutral-500" data-testid="my-rank-missing">
         Für dich sind im gewählten Zeitraum keine Punkte erfasst.
       </p>
-      <p v-else class="text-sm text-neutral-500" data-testid="not-linked">
+      <p v-else class="text-sm text-muted-foreground" data-testid="not-linked">
         Dein Account ist noch keinem Spieler-Datensatz zugeordnet.
       </p>
     </template>
 
     <section class="space-y-2" data-testid="top-three">
-      <h2 class="text-lg font-semibold text-neutral-900">Top 3</h2>
-      <p v-if="isLoading" class="text-sm text-neutral-500">Lade…</p>
-      <p v-else-if="loadError" class="text-sm text-red-700" role="alert">{{ loadError }}</p>
-      <p v-else-if="topThree.length === 0" class="text-sm text-neutral-500">
+      <h2 class="text-lg font-semibold text-foreground">Top 3</h2>
+      <p v-if="isLoading" class="text-sm text-muted-foreground">Lade…</p>
+      <p v-else-if="loadError" class="text-sm text-destructive" role="alert">{{ loadError }}</p>
+      <p v-else-if="topThree.length === 0" class="text-sm text-muted-foreground">
         Noch keine Punkte im gewählten Zeitraum.
       </p>
-      <ol v-else class="space-y-1">
-        <li
-          v-for="row in topThree"
-          :key="row.player_id"
-          class="rounded border border-neutral-200 bg-white px-3 py-2 flex justify-between items-center"
-        >
-          <span>
-            <span class="font-semibold mr-2">{{ row.rank_position }}.</span>
-            <span class="text-neutral-500 mr-1">
-              {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
-            </span>
-            {{ row.name }}
-          </span>
-          <NuxtLink
-            :to="`/t/${slug}/players/${row.player_id}`"
-            class="text-sm underline text-neutral-600"
-          >
-            Details
-          </NuxtLink>
+      <ol v-else class="space-y-1.5">
+        <li v-for="row in topThree" :key="row.player_id">
+          <ShadcnCard class="py-0 gap-0">
+            <ShadcnCardContent class="flex items-center justify-between px-3 py-2">
+              <span class="flex items-center gap-2">
+                <ShadcnBadge variant="default" class="min-w-6 justify-center tabular-nums">
+                  {{ row.rank_position }}
+                </ShadcnBadge>
+                <span class="text-muted-foreground text-sm">
+                  {{ row.jersey_number !== null ? `#${row.jersey_number}` : '—' }}
+                </span>
+                {{ row.name }}
+              </span>
+              <ShadcnButton as-child variant="link" size="sm">
+                <NuxtLink :to="`/t/${slug}/players/${row.player_id}`"> Details </NuxtLink>
+              </ShadcnButton>
+            </ShadcnCardContent>
+          </ShadcnCard>
         </li>
       </ol>
     </section>
 
     <nav class="flex flex-wrap gap-2">
-      <NuxtLink
-        :to="`/t/${slug}/ranking`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Vollständige Rangliste
-      </NuxtLink>
-      <NuxtLink
-        :to="`/t/${slug}/trainings`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Trainings
-      </NuxtLink>
-      <NuxtLink
-        v-if="isTrainer"
-        :to="`/t/${slug}/team/members`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Mitglieder
-      </NuxtLink>
-      <NuxtLink
-        v-if="isTrainer"
-        :to="`/t/${slug}/categories`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Kategorien
-      </NuxtLink>
-      <NuxtLink
-        v-if="isTrainer"
-        :to="`/t/${slug}/players`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Spieler
-      </NuxtLink>
-      <NuxtLink
-        v-if="isTrainer"
-        :to="`/t/${slug}/team/settings`"
-        class="min-h-touch inline-flex items-center px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-      >
-        Einstellungen
-      </NuxtLink>
+      <ShadcnButton as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/ranking`"> Vollständige Rangliste </NuxtLink>
+      </ShadcnButton>
+      <ShadcnButton as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/trainings`"> Trainings </NuxtLink>
+      </ShadcnButton>
+      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/team/members`"> Mitglieder </NuxtLink>
+      </ShadcnButton>
+      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/categories`"> Kategorien </NuxtLink>
+      </ShadcnButton>
+      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/players`"> Spieler </NuxtLink>
+      </ShadcnButton>
+      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
+        <NuxtLink :to="`/t/${slug}/team/settings`"> Einstellungen </NuxtLink>
+      </ShadcnButton>
     </nav>
 
     <RankingTable
