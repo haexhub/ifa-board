@@ -19,7 +19,7 @@ export const useTeamContext = () => {
       const query = client
         .from('memberships')
         .select('team_id, role, teams (id, name, slug)')
-      const { data, error } = await query.eq('user_id', user.value.id)
+      const { data, error } = await query.eq('user_id', user.value.sub)
       if (error) throw error
       return data ?? []
     },

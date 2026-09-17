@@ -12,7 +12,7 @@ export const useProfile = () => {
   const user = useSupabaseUser()
 
   const updateDisplayName = async (name: string): Promise<void> => {
-    const uid = user.value?.id
+    const uid = user.value?.sub
     if (!uid) throw new Error('Nicht angemeldet')
     const parsed = displayNameSchema.safeParse(name)
     if (!parsed.success) {
@@ -31,7 +31,7 @@ export const useProfile = () => {
   }
 
   const uploadAvatar = async (file: File): Promise<void> => {
-    const uid = user.value?.id
+    const uid = user.value?.sub
     if (!uid) throw new Error('Nicht angemeldet')
     const parsed = photoFileSchema.safeParse({
       type: file.type,
@@ -83,7 +83,7 @@ export const useProfile = () => {
   }
 
   const removeAvatar = async (): Promise<void> => {
-    const uid = user.value?.id
+    const uid = user.value?.sub
     if (!uid) throw new Error('Nicht angemeldet')
 
     const { data: before, error: readError } = await client
@@ -108,7 +108,7 @@ export const useProfile = () => {
   }
 
   const getOwnProfile = async (): Promise<OwnProfile> => {
-    const uid = user.value?.id
+    const uid = user.value?.sub
     if (!uid) throw new Error('Nicht angemeldet')
     const { data, error } = await client
       .from('user_profiles')

@@ -11,7 +11,8 @@ const bodySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+  const userId = user?.sub
+  if (!userId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
 
   const parsed = bodySchema.safeParse(await readBody(event))
   if (!parsed.success) {
@@ -46,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const [row] = await db.execute<{ slug: string }>(
-      sql`select slug from public.create_team_with_trainer(${name}, ${slug}, ${user.id}::uuid)`,
+      sql`select slug from public.create_team_with_trainer(${name}, ${slug}, ${userId}::uuid)`,
     )
     return { slug: row?.slug ?? slug }
   } catch (err) {

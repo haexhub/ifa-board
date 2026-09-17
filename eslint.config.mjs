@@ -3,6 +3,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import vue from 'eslint-plugin-vue'
 import prettier from 'eslint-config-prettier'
+import globals from 'globals'
 
 const nuxtGlobals = {
   defineNuxtConfig: 'readonly',
@@ -33,7 +34,7 @@ export default [
   ...vue.configs['flat/recommended'],
   {
     languageOptions: {
-      globals: nuxtGlobals,
+      globals: { ...globals.browser, ...nuxtGlobals },
       parserOptions: {
         parser: tseslint.parser,
       },

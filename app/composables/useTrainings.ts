@@ -65,8 +65,8 @@ export const useTrainings = () => {
         title: input.title ?? null,
         note: input.note ?? null,
         status: 'draft',
-        created_by: user.value.id,
-        last_updated_by: user.value.id,
+        created_by: user.value.sub,
+        last_updated_by: user.value.sub,
       })
       .select('*')
       .single()
@@ -84,8 +84,8 @@ export const useTrainings = () => {
           player_id: input.player_id,
           category_id: input.category_id,
           value: input.value,
-          created_by: user.value.id,
-          last_updated_by: user.value.id,
+          created_by: user.value.sub,
+          last_updated_by: user.value.sub,
         },
         { onConflict: 'training_id,player_id,category_id' },
       )
@@ -112,7 +112,7 @@ export const useTrainings = () => {
       .from('trainings')
       .update({
         status: 'saved',
-        last_updated_by: user.value.id,
+        last_updated_by: user.value.sub,
         ...input,
       })
       .eq('id', training_id)

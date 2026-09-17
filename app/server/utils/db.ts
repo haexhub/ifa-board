@@ -33,11 +33,12 @@ export const useUserDb = async <T>(
   work: (tx: Db) => Promise<T>,
 ): Promise<T> => {
   const user = await serverSupabaseUser(event)
-  if (!user) {
+  const userId = user?.sub
+  if (!userId) {
     throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
   const claims = {
-    sub: user.id,
+    sub: userId,
     email: user.email,
     role: 'authenticated',
   }
