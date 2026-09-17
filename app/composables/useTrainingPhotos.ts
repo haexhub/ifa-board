@@ -86,7 +86,7 @@ export const useTrainingPhotos = () => {
         storage_path: path,
         content_type: file.type,
         size_bytes: file.size,
-        uploaded_by: user.value.id,
+        uploaded_by: user.value.sub,
       })
       .select('*')
       .single()

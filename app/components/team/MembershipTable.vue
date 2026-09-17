@@ -152,7 +152,7 @@ defineExpose({ reload: load })
           <div>
             <p class="font-medium text-neutral-900">
               {{ row.display_name ?? row.user_id }}
-              <span v-if="row.user_id === currentUser?.id" class="text-xs text-neutral-500">(du)</span>
+              <span v-if="row.user_id === currentUser?.sub" class="text-xs text-neutral-500">(du)</span>
             </p>
             <p class="text-neutral-500">{{ row.role === 'trainer' ? 'Trainer' : 'Spieler' }}</p>
           </div>

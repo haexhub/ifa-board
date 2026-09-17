@@ -14,7 +14,7 @@ if (import.meta.client && user.value) {
   const membershipsQuery = client
     .from('memberships')
     .select('teams(slug)')
-    .eq('user_id', user.value.id)
+    .eq('user_id', user.value.sub)
   type Membership = QueryData<typeof membershipsQuery>[number]
   const { data } = await membershipsQuery
 

@@ -41,7 +41,7 @@ const finalize = async () => {
   const { data } = await client
     .from('memberships')
     .select('teams(slug)')
-    .eq('user_id', user.value.id)
+    .eq('user_id', user.value.sub)
 
   const slugs = (data ?? []).map((m) => m.teams?.slug).filter((s): s is string => Boolean(s))
   const lastSlug = import.meta.client ? localStorage.getItem('ifa:lastSlug') : null

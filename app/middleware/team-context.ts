@@ -14,7 +14,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     .from('memberships')
     .select('team_id, role, teams!inner(slug)')
     .eq('teams.slug', slug)
-    .eq('user_id', user.value.id)
+    .eq('user_id', user.value.sub)
     .maybeSingle()
 
   if (error || !data) {

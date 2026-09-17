@@ -47,7 +47,7 @@ export const useTeams = () => {
     const { data, error } = await client
       .from('memberships')
       .select('team_id, role, teams(id, name, slug)')
-      .eq('user_id', user.value.id)
+      .eq('user_id', user.value.sub)
     if (error) throw error
     return (data ?? []) as MyTeam[]
   }

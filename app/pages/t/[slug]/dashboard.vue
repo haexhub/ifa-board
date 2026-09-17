@@ -40,7 +40,7 @@ const loadLinkedPlayer = async () => {
     .from('players')
     .select('id')
     .eq('team_id', teamId.value)
-    .eq('linked_user_id', user.value.id)
+    .eq('linked_user_id', user.value.sub)
     .maybeSingle()
   linkedPlayerId.value = (data as { id: string } | null)?.id ?? null
 }
