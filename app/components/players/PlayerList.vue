@@ -116,13 +116,13 @@ defineExpose({ reload: load })
     <ShadcnTable v-else class="rounded-lg border" data-testid="player-table">
       <ShadcnTableHeader>
         <ShadcnTableRow class="hover:bg-transparent">
-          <ShadcnTableHead>#</ShadcnTableHead>
-          <ShadcnTableHead>Name</ShadcnTableHead>
-          <ShadcnTableHead>Position</ShadcnTableHead>
-          <ShadcnTableHead>Foto-OK</ShadcnTableHead>
-          <ShadcnTableHead>Status</ShadcnTableHead>
-          <ShadcnTableHead>Konto</ShadcnTableHead>
-          <ShadcnTableHead>Aktionen</ShadcnTableHead>
+          <ShadcnTableHead scope="col">#</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Name</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Position</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Foto-OK</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Status</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Konto</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Aktionen</ShadcnTableHead>
         </ShadcnTableRow>
       </ShadcnTableHeader>
       <ShadcnTableBody>
