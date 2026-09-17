@@ -13,7 +13,8 @@ const bodySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
+  const userId = user?.sub
+  if (!userId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
 
   const parsed = bodySchema.safeParse(await readBody(event))
   if (!parsed.success) {
@@ -26,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const [caller] = await db
     .select({ role: schema.memberships.role })
     .from(schema.memberships)
-    .where(and(eq(schema.memberships.teamId, team_id), eq(schema.memberships.userId, user.id)))
+    .where(and(eq(schema.memberships.teamId, team_id), eq(schema.memberships.userId, userId)))
     .limit(1)
   if (!caller || caller.role !== 'trainer') {
     throw createError({ statusCode: 403, statusMessage: 'Only trainers of the team may moderate' })

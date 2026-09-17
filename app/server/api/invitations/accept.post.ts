@@ -9,7 +9,8 @@ const bodySchema = z.object({
 
 export default defineEventHandler(async (event) => {
   const user = await serverSupabaseUser(event)
-  if (!user || !user.email) {
+  const userId = user?.sub
+  if (!userId || !user.email) {
     throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
   }
 
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const [row] = await db.execute<{ slug: string; already_accepted: boolean }>(
-      sql`select slug, already_accepted from public.accept_invitation(${parsed.data.token}, ${user.id}::uuid, ${user.email})`,
+      sql`select slug, already_accepted from public.accept_invitation(${parsed.data.token}, ${userId}::uuid, ${user.email})`,
     )
     return {
       slug: row?.slug ?? null,
