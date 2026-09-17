@@ -1,6 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@source "../../components";
+@source "../../layouts";
+@source "../../pages";
+@source "../../plugins";
+@source "../../composables";
+@source "../../app.vue";
+@source "../../error.vue";
+
+@utility min-h-touch {
+  min-height: 44px;
+}
+@utility min-w-touch {
+  min-width: 44px;
+}
 
 @layer base {
   html {

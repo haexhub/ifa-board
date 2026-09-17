@@ -1,11 +1,16 @@
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-09-01',
   devtools: { enabled: process.env.NUXT_DEVTOOLS === 'true' },
   ssr: true,
 
-  modules: ['@nuxtjs/supabase', '@nuxtjs/tailwindcss'],
+  modules: ['@nuxtjs/supabase'],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
 
   typescript: {
     strict: true,
