@@ -129,67 +129,69 @@ defineExpose({ reload: load })
 
 <template>
   <div class="space-y-3">
-    <h3 class="text-sm font-semibold text-neutral-900">Mitglieder</h3>
-    <p v-if="loading" class="text-sm text-neutral-500">Lade…</p>
-    <p v-else-if="error" class="text-sm text-red-700" role="alert">{{ error }}</p>
-    <ul v-else class="divide-y border rounded bg-white">
-      <li v-for="row in rows" :key="row.user_id" class="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between p-3">
-        <div class="flex items-center gap-3 text-sm">
-          <img
-            v-if="row.avatar_path"
-            :src="`/api/profile/avatar/${row.user_id}`"
-            alt=""
-            data-testid="member-avatar-image"
-            class="h-8 w-8 rounded-full object-cover bg-neutral-100"
-          />
-          <div
-            v-else
-            class="h-8 w-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500 text-xs"
-            aria-hidden="true"
-          >
-            ?
-          </div>
-          <div>
-            <p class="font-medium text-neutral-900">
-              {{ row.display_name ?? row.user_id }}
-              <span v-if="row.user_id === currentUser?.sub" class="text-xs text-neutral-500">(du)</span>
-            </p>
-            <p class="text-neutral-500">{{ row.role === 'trainer' ? 'Trainer' : 'Spieler' }}</p>
-          </div>
-        </div>
-        <div v-if="isTrainer" class="flex gap-2">
-          <select
-            :value="row.role"
-            class="min-h-touch px-2 rounded border border-neutral-300 text-sm bg-white"
-            @change="(e) => changeRole(row, (e.target as HTMLSelectElement).value as 'trainer' | 'player')"
-          >
-            <option value="player">Spieler</option>
-            <option value="trainer" :disabled="row.role === 'trainer' && trainerCount === 1">Trainer</option>
-          </select>
-          <button
-            type="button"
-            data-testid="member-reset-avatar"
-            class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-            @click="resetAvatar(row)"
-          >
-            Avatar zurücksetzen
-          </button>
-          <button
-            type="button"
-            data-testid="member-reset-name"
-            class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100"
-            @click="resetName(row)"
-          >
-            Namen zurücksetzen
-          </button>
-          <button
-            type="button"
-            class="min-h-touch px-3 rounded border border-red-300 text-red-700 text-sm hover:bg-red-50"
-            @click="remove(row)"
-          >
-            Entfernen
-          </button>
-        </div>
+    <h3 class="text-sm font-semibold text-foreground">Mitglieder</h3>
+    <p v-if="loading" class="text-sm text-muted-foreground">Lade…</p>
+    <p v-else-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
+    <ul v-else class="space-y-2">
+      <li v-for="row in rows" :key="row.user_id">
+        <ShadcnCard class="py-3">
+          <ShadcnCardContent class="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between px-3">
+            <div class="flex items-center gap-3 text-sm">
+              <img
+                v-if="row.avatar_path"
+                :src="`/api/profile/avatar/${row.user_id}`"
+                alt=""
+                data-testid="member-avatar-image"
+                class="h-8 w-8 rounded-full object-cover bg-muted"
+              />
+              <div
+                v-else
+                class="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs"
+                aria-hidden="true"
+              >
+                ?
+              </div>
+              <div>
+                <p class="font-medium text-foreground">
+                  {{ row.display_name ?? row.user_id }}
+                  <span v-if="row.user_id === currentUser?.sub" class="text-xs text-muted-foreground">(du)</span>
+                </p>
+                <p class="text-muted-foreground">{{ row.role === 'trainer' ? 'Trainer' : 'Spieler' }}</p>
+              </div>
+            </div>
+            <div v-if="isTrainer" class="flex flex-wrap gap-2">
+              <select
+                :value="row.role"
+                class="min-h-touch px-2 rounded-md border border-input bg-background text-sm"
+                @change="(e) => changeRole(row, (e.target as HTMLSelectElement).value as 'trainer' | 'player')"
+              >
+                <option value="player">Spieler</option>
+                <option value="trainer" :disabled="row.role === 'trainer' && trainerCount === 1">Trainer</option>
+              </select>
+              <ShadcnButton
+                type="button"
+                data-testid="member-reset-avatar"
+                variant="outline"
+                size="sm"
+                @click="resetAvatar(row)"
+              >
+                Avatar zurücksetzen
+              </ShadcnButton>
+              <ShadcnButton
+                type="button"
+                data-testid="member-reset-name"
+                variant="outline"
+                size="sm"
+                @click="resetName(row)"
+              >
+                Namen zurücksetzen
+              </ShadcnButton>
+              <ShadcnButton type="button" variant="destructive" size="sm" @click="remove(row)">
+                Entfernen
+              </ShadcnButton>
+            </div>
+          </ShadcnCardContent>
+        </ShadcnCard>
       </li>
     </ul>
   </div>

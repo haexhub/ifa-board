@@ -21,12 +21,12 @@ const onIssued = () => {
 <template>
   <section class="space-y-8">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold text-neutral-900">{{ currentTeam?.name ?? 'Team' }}</h1>
-      <p class="text-neutral-600">Mitglieder und offene Einladungen verwalten.</p>
+      <h1 class="text-2xl font-semibold text-foreground">{{ currentTeam?.name ?? 'Team' }}</h1>
+      <p class="text-muted-foreground">Mitglieder und offene Einladungen verwalten.</p>
     </header>
 
     <div class="space-y-3">
-      <h2 class="text-lg font-semibold text-neutral-900">Neuen Nutzer einladen</h2>
+      <h2 class="text-lg font-semibold text-foreground">Neuen Nutzer einladen</h2>
       <InviteForm v-if="teamId" :team-id="teamId" @issued="onIssued" />
     </div>
 

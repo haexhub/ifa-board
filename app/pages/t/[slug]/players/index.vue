@@ -55,18 +55,13 @@ const onInvited = () => {
 <template>
   <section class="space-y-8" data-testid="players-page">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold text-neutral-900">Spielerstamm</h1>
-      <p class="text-neutral-600">Kader für {{ currentTeam?.name ?? 'Team' }} verwalten.</p>
+      <h1 class="text-2xl font-semibold text-foreground">Spielerstamm</h1>
+      <p class="text-muted-foreground">Kader für {{ currentTeam?.name ?? 'Team' }} verwalten.</p>
     </header>
 
-    <button
-      type="button"
-      data-testid="player-new-button"
-      class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800"
-      @click="openCreateDialog"
-    >
+    <ShadcnButton type="button" data-testid="player-new-button" @click="openCreateDialog">
       Neuer Spieler
-    </button>
+    </ShadcnButton>
 
     <PlayerList v-if="teamId" ref="playerList" :team-id="teamId" @edit="openEditDialog" @invite="openInviteDialog" />
 

@@ -107,106 +107,112 @@ defineExpose({ reload: load })
 
 <template>
   <div class="space-y-3" data-testid="player-list">
-    <h3 class="text-sm font-semibold text-neutral-900">Spieler:innen</h3>
-    <p v-if="loading" class="text-sm text-neutral-500">Lade…</p>
-    <p v-else-if="error" class="text-sm text-red-700" role="alert">{{ error }}</p>
-    <p v-else-if="players.length === 0" class="text-sm text-neutral-500">
+    <h3 class="text-sm font-semibold text-foreground">Spieler:innen</h3>
+    <p v-if="loading" class="text-sm text-muted-foreground">Lade…</p>
+    <p v-else-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
+    <p v-else-if="players.length === 0" class="text-sm text-muted-foreground">
       Keine Spieler:innen vorhanden.
     </p>
-    <div v-else class="overflow-x-auto rounded border border-neutral-200 bg-white">
-      <table class="w-full text-sm border-collapse" data-testid="player-table">
-        <thead class="bg-neutral-100">
-          <tr>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">#</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Name</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Position</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Foto-OK</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Status</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Konto</th>
-            <th scope="col" class="border-b border-neutral-200 px-3 py-2 text-left font-semibold">Aktionen</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="row in players"
-            :key="row.id"
-            data-testid="player-row"
-            :class="{ 'opacity-60': !row.active }"
-          >
-            <td class="border-b border-neutral-200 px-3 py-2">{{ row.jersey_number ?? '—' }}</td>
-            <td class="border-b border-neutral-200 px-3 py-2 font-medium text-neutral-900">
-              {{ row.name }}
-            </td>
-            <td class="border-b border-neutral-200 px-3 py-2 text-neutral-600">
-              {{ row.position ?? '—' }}
-            </td>
-            <td class="border-b border-neutral-200 px-3 py-2">
-              <input
-                type="checkbox"
-                :checked="row.photo_consent"
-                :aria-label="`Foto-Einwilligung ${row.name}`"
-                class="h-5 w-5"
-                @change="onToggleConsent(row)"
-              />
-            </td>
-            <td class="border-b border-neutral-200 px-3 py-2">{{ row.active ? 'Aktiv' : 'Inaktiv' }}</td>
-            <td class="border-b border-neutral-200 px-3 py-2">
-              <span v-if="row.linked_user_id" class="text-neutral-500" data-testid="player-linked">
-                Verknüpft
-              </span>
-              <div v-else-if="candidates.length" class="flex items-center gap-1">
-                <select
-                  v-model="linkSelection[row.id]"
-                  :aria-label="`Konto für ${row.name} wählen`"
-                  class="min-h-touch px-2 rounded border border-neutral-300 text-xs bg-white"
-                >
-                  <option value="">Konto wählen…</option>
-                  <option v-for="c in candidates" :key="c.user_id" :value="c.user_id">
-                    {{ c.display_name ?? c.user_id }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  data-testid="player-link-button"
-                  class="min-h-touch px-2 rounded border border-neutral-300 text-xs hover:bg-neutral-50"
-                  @click="onLink(row)"
-                >
-                  Verknüpfen
-                </button>
-              </div>
-              <span v-else class="text-neutral-400">—</span>
-            </td>
-            <td class="border-b border-neutral-200 px-3 py-2">
-              <div class="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  data-testid="player-edit-button"
-                  class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-50"
-                  @click="emit('edit', row)"
-                >
-                  Bearbeiten
-                </button>
-                <button
-                  v-if="row.active"
-                  type="button"
-                  class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-50"
-                  @click="onDeactivate(row)"
-                >
-                  Deaktivieren
-                </button>
-                <button
-                  type="button"
-                  data-testid="player-invite-button"
-                  class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-50"
-                  @click="emit('invite')"
-                >
-                  Einladen
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ShadcnTable v-else class="rounded-lg border" data-testid="player-table">
+      <ShadcnTableHeader>
+        <ShadcnTableRow class="hover:bg-transparent">
+          <ShadcnTableHead scope="col">#</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Name</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Position</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Foto-OK</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Status</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Konto</ShadcnTableHead>
+          <ShadcnTableHead scope="col">Aktionen</ShadcnTableHead>
+        </ShadcnTableRow>
+      </ShadcnTableHeader>
+      <ShadcnTableBody>
+        <ShadcnTableRow
+          v-for="row in players"
+          :key="row.id"
+          data-testid="player-row"
+          :class="{ 'opacity-60': !row.active }"
+        >
+          <ShadcnTableCell>{{ row.jersey_number ?? '—' }}</ShadcnTableCell>
+          <ShadcnTableCell class="font-medium text-foreground">
+            {{ row.name }}
+          </ShadcnTableCell>
+          <ShadcnTableCell class="text-muted-foreground">
+            {{ row.position ?? '—' }}
+          </ShadcnTableCell>
+          <ShadcnTableCell>
+            <input
+              type="checkbox"
+              :checked="row.photo_consent"
+              :aria-label="`Foto-Einwilligung ${row.name}`"
+              class="h-5 w-5"
+              @change="onToggleConsent(row)"
+            />
+          </ShadcnTableCell>
+          <ShadcnTableCell>
+            <ShadcnBadge :variant="row.active ? 'default' : 'secondary'">
+              {{ row.active ? 'Aktiv' : 'Inaktiv' }}
+            </ShadcnBadge>
+          </ShadcnTableCell>
+          <ShadcnTableCell>
+            <ShadcnBadge v-if="row.linked_user_id" variant="secondary" data-testid="player-linked">
+              Verknüpft
+            </ShadcnBadge>
+            <div v-else-if="candidates.length" class="flex items-center gap-1">
+              <select
+                v-model="linkSelection[row.id]"
+                :aria-label="`Konto für ${row.name} wählen`"
+                class="min-h-touch px-2 rounded-md border border-input bg-background text-xs"
+              >
+                <option value="">Konto wählen…</option>
+                <option v-for="c in candidates" :key="c.user_id" :value="c.user_id">
+                  {{ c.display_name ?? c.user_id }}
+                </option>
+              </select>
+              <ShadcnButton
+                type="button"
+                data-testid="player-link-button"
+                variant="outline"
+                size="sm"
+                @click="onLink(row)"
+              >
+                Verknüpfen
+              </ShadcnButton>
+            </div>
+            <span v-else class="text-muted-foreground">—</span>
+          </ShadcnTableCell>
+          <ShadcnTableCell>
+            <div class="flex flex-wrap gap-2">
+              <ShadcnButton
+                type="button"
+                data-testid="player-edit-button"
+                variant="outline"
+                size="sm"
+                @click="emit('edit', row)"
+              >
+                Bearbeiten
+              </ShadcnButton>
+              <ShadcnButton
+                v-if="row.active"
+                type="button"
+                variant="outline"
+                size="sm"
+                @click="onDeactivate(row)"
+              >
+                Deaktivieren
+              </ShadcnButton>
+              <ShadcnButton
+                type="button"
+                data-testid="player-invite-button"
+                variant="outline"
+                size="sm"
+                @click="emit('invite')"
+              >
+                Einladen
+              </ShadcnButton>
+            </div>
+          </ShadcnTableCell>
+        </ShadcnTableRow>
+      </ShadcnTableBody>
+    </ShadcnTable>
   </div>
 </template>
