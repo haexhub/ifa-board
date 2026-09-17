@@ -1,0 +1,57 @@
+{
+  "generation_id": "g_20260917T153851Z_e3b0",
+  "molecules": [
+    {
+      "id": "com.github.haexmas.atoms.general-coding",
+      "paths": [
+        ".spaex/constitution.md"
+      ],
+      "revision": "cc9e9935998732f7a09486a68dd4c74859481c98",
+      "source": "https://github.com/haexmas/atoms"
+    },
+    {
+      "hook_status": "failed",
+      "id": "com.github.haexmas.atoms.graphify-first-authoring",
+      "paths": [
+        ".spaex/constitution.md"
+      ],
+      "revision": "cc9e9935998732f7a09486a68dd4c74859481c98",
+      "source": "https://github.com/haexmas/atoms"
+    },
+    {
+      "id": "com.github.haexmas.atoms.javascript-typescript",
+      "paths": [
+        ".spaex/constitution.md"
+      ],
+      "revision": "cc9e9935998732f7a09486a68dd4c74859481c98",
+      "source": "https://github.com/haexmas/atoms"
+    },
+    {
+      "id": "com.github.haexmas.atoms.ponytail",
+      "paths": [
+        ".spaex/constitution.md"
+      ],
+      "revision": "cc9e9935998732f7a09486a68dd4c74859481c98",
+      "source": "https://github.com/haexmas/atoms"
+    },
+    {
+      "id": "com.github.haexmas.atoms.speckit",
+      "paths": [],
+      "revision": "cc9e9935998732f7a09486a68dd4c74859481c98",
+      "source": "https://github.com/haexmas/atoms",
+      "speckit": {
+        "cli_version": "1.0.6",
+        "declaration_fingerprint": "sha256:71da49e0df1330c7d65e8ddc6cedc01636c4f0ea1e84e5b19ab974a56541625e",
+        "outcomes": {
+          "claude": "installed",
+          "codex": "installed"
+        },
+        "selected": [
+          "claude",
+          "codex"
+        ]
+      }
+    }
+  ],
+  "spaex_version": "4"
+}

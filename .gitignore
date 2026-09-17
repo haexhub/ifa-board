@@ -41,3 +41,7 @@ supabase/.temp/
 .vercel/
 .playwright-mcp/
 .worktrees/
+
+# spaex
+.spaex/manifest.json.lock
+graphify-out/
