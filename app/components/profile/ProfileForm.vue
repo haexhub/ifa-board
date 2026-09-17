@@ -81,36 +81,38 @@ const onAvatarRemove = async () => {
         :src="avatarUrl"
         alt=""
         data-testid="profile-avatar-image"
-        class="h-16 w-16 rounded-full object-cover bg-neutral-100"
+        class="h-16 w-16 rounded-full object-cover bg-muted"
       />
       <div
         v-else
         data-testid="profile-avatar-placeholder"
-        class="h-16 w-16 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500 text-xl"
+        class="h-16 w-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xl"
         aria-hidden="true"
       >
         ?
       </div>
       <div class="space-y-1">
         <div class="flex gap-2">
-          <button
+          <ShadcnButton
             type="button"
+            variant="outline"
+            size="sm"
             :disabled="avatarLoading"
-            class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100 disabled:opacity-50"
             @click="avatarInput?.click()"
           >
             {{ avatarLoading ? 'Lädt…' : 'Avatar wählen' }}
-          </button>
-          <button
+          </ShadcnButton>
+          <ShadcnButton
             v-if="avatarUrl"
             type="button"
+            variant="outline"
+            size="sm"
             :disabled="avatarLoading"
             data-testid="profile-avatar-remove"
-            class="min-h-touch px-3 rounded border border-neutral-300 text-sm hover:bg-neutral-100 disabled:opacity-50"
             @click="onAvatarRemove"
           >
             Avatar entfernen
-          </button>
+          </ShadcnButton>
         </div>
         <input
           ref="avatarInput"
@@ -120,31 +122,21 @@ const onAvatarRemove = async () => {
           data-testid="profile-avatar-input"
           @change="onAvatarPick"
         />
-        <p v-if="avatarError" class="text-sm text-red-700" data-testid="profile-avatar-error">
+        <p v-if="avatarError" role="alert" class="text-sm text-destructive" data-testid="profile-avatar-error">
           {{ avatarError }}
         </p>
       </div>
     </div>
 
     <form class="space-y-3" novalidate data-testid="profile-form" @submit.prevent="submitName">
-      <label class="block">
-        <span class="text-sm font-medium text-neutral-800">Name</span>
-        <input
-          v-model="name"
-          type="text"
-          required
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-        <span v-if="nameError" class="text-sm text-red-700">{{ nameError }}</span>
-      </label>
-      <button
-        type="submit"
-        :disabled="nameLoading"
-        data-testid="profile-form-save-name"
-        class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-      >
+      <ShadcnLabel class="block space-y-1">
+        <span>Name</span>
+        <ShadcnInput v-model="name" type="text" required />
+        <span v-if="nameError" role="alert" class="block text-sm text-destructive">{{ nameError }}</span>
+      </ShadcnLabel>
+      <ShadcnButton type="submit" :disabled="nameLoading" data-testid="profile-form-save-name">
         {{ nameLoading ? 'Speichere…' : 'Speichern' }}
-      </button>
+      </ShadcnButton>
     </form>
   </div>
 </template>

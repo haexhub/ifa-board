@@ -27,7 +27,11 @@ const onIssued = () => {
 
     <div class="space-y-3">
       <h2 class="text-lg font-semibold text-foreground">Neuen Nutzer einladen</h2>
-      <InviteForm v-if="teamId" :team-id="teamId" @issued="onIssued" />
+      <ShadcnCard v-if="teamId">
+        <ShadcnCardContent>
+          <InviteForm :team-id="teamId" @issued="onIssued" />
+        </ShadcnCardContent>
+      </ShadcnCard>
     </div>
 
     <InviteList v-if="teamId" ref="inviteList" :team-id="teamId" />

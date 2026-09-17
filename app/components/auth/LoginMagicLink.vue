@@ -38,29 +38,19 @@ const submit = async () => {
 
 <template>
   <form v-if="!sent" class="space-y-4" novalidate @submit.prevent="submit">
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">E-Mail-Adresse</span>
-      <input
-        v-model="email"
-        type="email"
-        autocomplete="email"
-        required
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldError" class="text-sm text-red-700">{{ fieldError }}</span>
-    </label>
-    <button
-      type="submit"
-      :disabled="loading"
-      class="w-full min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-    >
+    <ShadcnLabel class="block space-y-1">
+      <span>E-Mail-Adresse</span>
+      <ShadcnInput v-model="email" type="email" autocomplete="email" required />
+      <span v-if="fieldError" class="block text-sm text-destructive">{{ fieldError }}</span>
+    </ShadcnLabel>
+    <ShadcnButton type="submit" :disabled="loading" class="w-full">
       {{ loading ? 'Sende Link…' : 'Link senden' }}
-    </button>
-    <p v-if="submitError" class="text-sm text-red-700" role="alert">{{ submitError }}</p>
+    </ShadcnButton>
+    <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
-  <div v-else class="rounded border border-green-200 bg-green-50 p-4 text-green-900">
+  <div v-else class="rounded-lg border border-success/30 bg-success/10 p-4 text-success">
     <p class="font-medium">Prüfe deine E-Mails</p>
-    <p class="text-sm mt-1">
+    <p class="text-sm mt-1 text-foreground">
       Wir haben dir einen Anmelde-Link an <strong>{{ email }}</strong> geschickt.
     </p>
   </div>

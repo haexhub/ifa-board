@@ -21,34 +21,34 @@ type PlayerRow = {
 }
 
 const playerList = ref<InstanceType<typeof PlayerList> | null>(null)
-const playerDialog = ref<HTMLDialogElement | null>(null)
-const inviteDialog = ref<HTMLDialogElement | null>(null)
+const isPlayerDialogOpen = ref(false)
+const isInviteDialogOpen = ref(false)
 const editingPlayer = ref<PlayerRow | null>(null)
 const dialogSeq = ref(0)
 
 const openCreateDialog = () => {
   editingPlayer.value = null
   dialogSeq.value += 1
-  playerDialog.value?.showModal()
+  isPlayerDialogOpen.value = true
 }
 
 const openEditDialog = (player: PlayerRow) => {
   editingPlayer.value = player
   dialogSeq.value += 1
-  playerDialog.value?.showModal()
+  isPlayerDialogOpen.value = true
 }
 
 const onPlayerSaved = () => {
-  playerDialog.value?.close()
+  isPlayerDialogOpen.value = false
   playerList.value?.reload?.()
 }
 
 const openInviteDialog = () => {
-  inviteDialog.value?.showModal()
+  isInviteDialogOpen.value = true
 }
 
 const onInvited = () => {
-  inviteDialog.value?.close()
+  isInviteDialogOpen.value = false
 }
 </script>
 
@@ -65,54 +65,44 @@ const onInvited = () => {
 
     <PlayerList v-if="teamId" ref="playerList" :team-id="teamId" @edit="openEditDialog" @invite="openInviteDialog" />
 
-    <dialog
-      ref="playerDialog"
-      data-testid="player-dialog"
-      class="rounded-lg p-0 backdrop:bg-black/40 w-full max-w-md"
-    >
-      <div class="p-4 space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-neutral-900">
-            {{ editingPlayer ? 'Spieler bearbeiten' : 'Neuer Spieler' }}
-          </h2>
-          <button
-            type="button"
-            aria-label="Schließen"
-            class="text-neutral-500 hover:text-neutral-900"
-            @click="playerDialog?.close()"
-          >
-            ✕
-          </button>
+    <ShadcnDialog v-model:open="isPlayerDialogOpen">
+      <ShadcnDialogContent>
+        <div data-testid="player-dialog">
+          <ShadcnDialogHeader>
+            <ShadcnDialogTitle>
+              {{ editingPlayer ? 'Spieler bearbeiten' : 'Neuer Spieler' }}
+            </ShadcnDialogTitle>
+          </ShadcnDialogHeader>
+          <PlayerForm
+            v-if="teamId"
+            :key="`${dialogSeq}-${editingPlayer?.id ?? 'new'}`"
+            :team-id="teamId"
+            :player="editingPlayer"
+            @saved="onPlayerSaved"
+          />
+          <ShadcnDialogFooter>
+            <ShadcnDialogClose as-child>
+              <ShadcnButton type="button" variant="outline">Schließen</ShadcnButton>
+            </ShadcnDialogClose>
+          </ShadcnDialogFooter>
         </div>
-        <PlayerForm
-          v-if="teamId"
-          :key="`${dialogSeq}-${editingPlayer?.id ?? 'new'}`"
-          :team-id="teamId"
-          :player="editingPlayer"
-          @saved="onPlayerSaved"
-        />
-      </div>
-    </dialog>
+      </ShadcnDialogContent>
+    </ShadcnDialog>
 
-    <dialog
-      ref="inviteDialog"
-      data-testid="player-invite-dialog"
-      class="rounded-lg p-0 backdrop:bg-black/40 w-full max-w-md"
-    >
-      <div class="p-4 space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-neutral-900">Spieler einladen</h2>
-          <button
-            type="button"
-            aria-label="Schließen"
-            class="text-neutral-500 hover:text-neutral-900"
-            @click="inviteDialog?.close()"
-          >
-            ✕
-          </button>
+    <ShadcnDialog v-model:open="isInviteDialogOpen">
+      <ShadcnDialogContent>
+        <div data-testid="player-invite-dialog">
+          <ShadcnDialogHeader>
+            <ShadcnDialogTitle>Spieler einladen</ShadcnDialogTitle>
+          </ShadcnDialogHeader>
+          <InviteForm v-if="teamId" :team-id="teamId" default-role="player" @issued="onInvited" />
+          <ShadcnDialogFooter>
+            <ShadcnDialogClose as-child>
+              <ShadcnButton type="button" variant="outline">Schließen</ShadcnButton>
+            </ShadcnDialogClose>
+          </ShadcnDialogFooter>
         </div>
-        <InviteForm v-if="teamId" :team-id="teamId" default-role="player" @issued="onInvited" />
-      </div>
-    </dialog>
+      </ShadcnDialogContent>
+    </ShadcnDialog>
   </section>
 </template>

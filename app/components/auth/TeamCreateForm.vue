@@ -53,37 +53,24 @@ const submit = async () => {
 
 <template>
   <form class="space-y-4" novalidate @submit.prevent="submit">
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Team-Name</span>
-      <input
-        v-model="name"
-        type="text"
-        required
-        maxlength="80"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldErrors.name" class="text-sm text-red-700">{{ fieldErrors.name }}</span>
-    </label>
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">
-        Slug <span class="text-neutral-500 font-normal">(optional)</span>
-      </span>
-      <input
+    <ShadcnLabel class="block space-y-1">
+      <span>Team-Name</span>
+      <ShadcnInput v-model="name" type="text" required maxlength="80" />
+      <span v-if="fieldErrors.name" class="block text-sm text-destructive">{{ fieldErrors.name }}</span>
+    </ShadcnLabel>
+    <ShadcnLabel class="block space-y-1">
+      <span>Slug <span class="text-muted-foreground font-normal">(optional)</span></span>
+      <ShadcnInput
         v-model="slug"
         type="text"
         maxlength="64"
         placeholder="wird aus dem Namen abgeleitet"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
       />
-      <span v-if="fieldErrors.slug" class="text-sm text-red-700">{{ fieldErrors.slug }}</span>
-    </label>
-    <button
-      type="submit"
-      :disabled="loading"
-      class="w-full min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-    >
+      <span v-if="fieldErrors.slug" class="block text-sm text-destructive">{{ fieldErrors.slug }}</span>
+    </ShadcnLabel>
+    <ShadcnButton type="submit" :disabled="loading" class="w-full">
       {{ loading ? 'Lege an…' : 'Team gründen' }}
-    </button>
-    <p v-if="submitError" class="text-sm text-red-700" role="alert">{{ submitError }}</p>
+    </ShadcnButton>
+    <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
 </template>

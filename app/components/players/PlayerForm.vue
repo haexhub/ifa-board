@@ -64,10 +64,7 @@ const onCandidateChange = () => {
   if (candidate) name.value = candidate.display_name ?? ''
 }
 
-const onJerseyInput = (evt: Event) => {
-  const v = (evt.target as HTMLInputElement).value
-  jerseyNumber.value = v === '' ? null : Number(v)
-}
+const jerseyNumberModel = useNullableNumberModel(jerseyNumber)
 
 const submit = async () => {
   fieldErrors.value = {}
@@ -149,24 +146,24 @@ const submit = async () => {
   <form class="space-y-3" novalidate data-testid="player-form" @submit.prevent="submit">
     <div v-if="!player" class="flex flex-wrap gap-4 text-sm" role="radiogroup" aria-label="Konto-Zuordnung">
       <label class="flex items-center gap-1">
-        <input v-model="mode" type="radio" value="manual" />
+        <input v-model="mode" type="radio" class="accent-primary" value="manual" />
         Manuell
       </label>
       <label v-if="candidates.length" class="flex items-center gap-1">
-        <input v-model="mode" type="radio" value="link" />
+        <input v-model="mode" type="radio" class="accent-primary" value="link" />
         Bestehendes Konto verknüpfen
       </label>
       <label class="flex items-center gap-1">
-        <input v-model="mode" type="radio" value="invite" />
+        <input v-model="mode" type="radio" class="accent-primary" value="invite" />
         Per E-Mail einladen
       </label>
     </div>
     <label v-if="!player && mode === 'link'" class="block">
-      <span class="text-sm font-medium text-neutral-800">Konto</span>
+      <span class="text-sm font-medium text-foreground">Konto</span>
       <select
         v-model="selectedCandidateId"
         data-testid="player-form-candidate-select"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 bg-white focus:border-neutral-900 focus:outline-none"
+        class="mt-1 w-full min-h-touch px-3 rounded-md border border-input bg-background accent-primary"
         @change="onCandidateChange"
       >
         <option value="">— Konto wählen —</option>
@@ -175,63 +172,38 @@ const submit = async () => {
         </option>
       </select>
     </label>
-    <label v-if="!player && mode === 'invite'" class="block">
-      <span class="text-sm font-medium text-neutral-800">E-Mail</span>
-      <input
-        v-model="inviteEmail"
-        type="email"
-        data-testid="player-form-invite-email"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldErrors.email" class="text-sm text-red-700">{{ fieldErrors.email }}</span>
-    </label>
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Name</span>
-      <input
-        v-model="name"
-        type="text"
-        required
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldErrors.name" class="text-sm text-red-700">{{ fieldErrors.name }}</span>
-    </label>
+    <ShadcnLabel v-if="!player && mode === 'invite'" class="block space-y-1">
+      <span>E-Mail</span>
+      <ShadcnInput v-model="inviteEmail" type="email" data-testid="player-form-invite-email" />
+      <span v-if="fieldErrors.email" class="block text-sm text-destructive">{{ fieldErrors.email }}</span>
+    </ShadcnLabel>
+    <ShadcnLabel class="block space-y-1">
+      <span>Name</span>
+      <ShadcnInput v-model="name" type="text" required />
+      <span v-if="fieldErrors.name" class="block text-sm text-destructive">{{ fieldErrors.name }}</span>
+    </ShadcnLabel>
     <div class="flex gap-3">
-      <label class="flex-1 block">
-        <span class="text-sm font-medium text-neutral-800">Trikotnummer (optional)</span>
-        <input
-          :value="jerseyNumber ?? ''"
-          type="number"
-          min="0"
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-          @input="onJerseyInput"
-        />
-        <span v-if="fieldErrors.jersey_number" class="text-sm text-red-700">{{ fieldErrors.jersey_number }}</span>
-      </label>
-      <label class="flex-1 block">
-        <span class="text-sm font-medium text-neutral-800">Position (optional)</span>
-        <input
-          v-model="position"
-          type="text"
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-      </label>
+      <ShadcnLabel class="flex-1 block space-y-1">
+        <span>Trikotnummer (optional)</span>
+        <ShadcnInput v-model="jerseyNumberModel" type="number" min="0" />
+        <span v-if="fieldErrors.jersey_number" class="block text-sm text-destructive">{{ fieldErrors.jersey_number }}</span>
+      </ShadcnLabel>
+      <ShadcnLabel class="flex-1 block space-y-1">
+        <span>Position (optional)</span>
+        <ShadcnInput v-model="position" type="text" />
+      </ShadcnLabel>
     </div>
     <label class="flex items-center gap-2">
-      <input v-model="consent" type="checkbox" class="h-5 w-5" />
-      <span class="text-sm font-medium text-neutral-800">Foto-Einwilligung</span>
+      <ShadcnCheckbox v-model="consent" />
+      <span class="text-sm font-medium text-foreground">Foto-Einwilligung</span>
     </label>
     <label class="flex items-center gap-2">
-      <input v-model="active" type="checkbox" class="h-5 w-5" />
-      <span class="text-sm font-medium text-neutral-800">Aktiv im Kader</span>
+      <ShadcnCheckbox v-model="active" />
+      <span class="text-sm font-medium text-foreground">Aktiv im Kader</span>
     </label>
-    <button
-      type="submit"
-      :disabled="loading"
-      data-testid="player-form-submit"
-      class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-    >
+    <ShadcnButton type="submit" :disabled="loading" data-testid="player-form-submit">
       {{ loading ? 'Speichere…' : 'Speichern' }}
-    </button>
-    <p v-if="submitError" class="text-sm text-red-700" role="alert">{{ submitError }}</p>
+    </ShadcnButton>
+    <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
 </template>

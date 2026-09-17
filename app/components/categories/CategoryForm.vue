@@ -48,6 +48,10 @@ const fieldErrors = ref<{
 const submitError = ref<string | null>(null)
 const loading = ref(false)
 
+const valueMinModel = useNumberModel(valueMin)
+const valueMaxModel = useNumberModel(valueMax)
+const sortOrderModel = useNumberModel(sortOrder)
+
 const submit = async () => {
   fieldErrors.value = {}
   submitError.value = null
@@ -91,61 +95,35 @@ const submit = async () => {
 
 <template>
   <form class="space-y-3" novalidate data-testid="category-form" @submit.prevent="submit">
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Name</span>
-      <input
-        v-model="name"
-        type="text"
-        required
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldErrors.name" class="text-sm text-red-700">{{ fieldErrors.name }}</span>
-    </label>
+    <ShadcnLabel class="block space-y-1">
+      <span>Name</span>
+      <ShadcnInput v-model="name" type="text" required />
+      <span v-if="fieldErrors.name" class="block text-sm text-destructive">{{ fieldErrors.name }}</span>
+    </ShadcnLabel>
     <div class="flex gap-3">
-      <label class="flex-1 block">
-        <span class="text-sm font-medium text-neutral-800">Min</span>
-        <input
-          v-model.number="valueMin"
-          type="number"
-          required
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-        <span v-if="fieldErrors.value_min" class="text-sm text-red-700">{{ fieldErrors.value_min }}</span>
-      </label>
-      <label class="flex-1 block">
-        <span class="text-sm font-medium text-neutral-800">Max</span>
-        <input
-          v-model.number="valueMax"
-          type="number"
-          required
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-        <span v-if="fieldErrors.value_max" class="text-sm text-red-700">{{ fieldErrors.value_max }}</span>
-      </label>
+      <ShadcnLabel class="flex-1 block space-y-1">
+        <span>Min</span>
+        <ShadcnInput v-model="valueMinModel" type="number" required />
+        <span v-if="fieldErrors.value_min" class="block text-sm text-destructive">{{ fieldErrors.value_min }}</span>
+      </ShadcnLabel>
+      <ShadcnLabel class="flex-1 block space-y-1">
+        <span>Max</span>
+        <ShadcnInput v-model="valueMaxModel" type="number" required />
+        <span v-if="fieldErrors.value_max" class="block text-sm text-destructive">{{ fieldErrors.value_max }}</span>
+      </ShadcnLabel>
     </div>
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Reihenfolge</span>
-      <input
-        v-model.number="sortOrder"
-        type="number"
-        min="1"
-        required
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-      />
-      <span v-if="fieldErrors.sort_order" class="text-sm text-red-700">{{ fieldErrors.sort_order }}</span>
-    </label>
+    <ShadcnLabel class="block space-y-1">
+      <span>Reihenfolge</span>
+      <ShadcnInput v-model="sortOrderModel" type="number" min="1" required />
+      <span v-if="fieldErrors.sort_order" class="block text-sm text-destructive">{{ fieldErrors.sort_order }}</span>
+    </ShadcnLabel>
     <label class="flex items-center gap-2">
-      <input v-model="active" type="checkbox" class="h-5 w-5" />
-      <span class="text-sm font-medium text-neutral-800">Aktiv</span>
+      <ShadcnCheckbox v-model="active" />
+      <span class="text-sm font-medium text-foreground">Aktiv</span>
     </label>
-    <button
-      type="submit"
-      :disabled="loading"
-      data-testid="category-form-submit"
-      class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-    >
+    <ShadcnButton type="submit" :disabled="loading" data-testid="category-form-submit">
       {{ loading ? 'Speichere…' : 'Speichern' }}
-    </button>
-    <p v-if="submitError" class="text-sm text-red-700" role="alert">{{ submitError }}</p>
+    </ShadcnButton>
+    <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
 </template>

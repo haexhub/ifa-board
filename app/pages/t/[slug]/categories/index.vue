@@ -20,7 +20,7 @@ type Cat = {
 }
 
 const categoryList = ref<InstanceType<typeof CategoryList> | null>(null)
-const dialog = ref<HTMLDialogElement | null>(null)
+const isDialogOpen = ref(false)
 const nextSortOrder = ref(1)
 const editingCategory = ref<Cat | null>(null)
 const dialogSeq = ref(0)
@@ -29,17 +29,17 @@ const openCreateDialog = () => {
   editingCategory.value = null
   nextSortOrder.value = (categoryList.value?.maxSortOrder() ?? 0) + 1
   dialogSeq.value += 1
-  dialog.value?.showModal()
+  isDialogOpen.value = true
 }
 
 const openEditDialog = (category: Cat) => {
   editingCategory.value = category
   dialogSeq.value += 1
-  dialog.value?.showModal()
+  isDialogOpen.value = true
 }
 
 const onSaved = () => {
-  dialog.value?.close()
+  isDialogOpen.value = false
   categoryList.value?.reload?.()
 }
 </script>
@@ -47,49 +47,34 @@ const onSaved = () => {
 <template>
   <section class="space-y-8" data-testid="categories-page">
     <header class="space-y-1">
-      <h1 class="text-2xl font-semibold text-neutral-900">Punktekategorien</h1>
-      <p class="text-neutral-600">Kategorien für {{ currentTeam?.name ?? 'Team' }} verwalten.</p>
+      <h1 class="text-2xl font-semibold text-foreground">Punktekategorien</h1>
+      <p class="text-muted-foreground">Kategorien für {{ currentTeam?.name ?? 'Team' }} verwalten.</p>
     </header>
 
-    <button
-      type="button"
-      data-testid="category-new-button"
-      class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800"
-      @click="openCreateDialog"
-    >
+    <ShadcnButton type="button" data-testid="category-new-button" @click="openCreateDialog">
       Neue Kategorie
-    </button>
+    </ShadcnButton>
 
     <CategoryList v-if="teamId" ref="categoryList" :team-id="teamId" @edit="openEditDialog" />
 
-    <dialog
-      ref="dialog"
-      data-testid="category-dialog"
-      class="rounded-lg p-0 backdrop:bg-black/40 w-full max-w-md"
-    >
-      <div class="p-4 space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-neutral-900">
-            {{ editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}
-          </h2>
-          <button
-            type="button"
-            aria-label="Schließen"
-            class="text-neutral-500 hover:text-neutral-900"
-            @click="dialog?.close()"
-          >
-            ✕
-          </button>
+    <ShadcnDialog v-model:open="isDialogOpen">
+      <ShadcnDialogContent>
+        <div data-testid="category-dialog">
+          <ShadcnDialogHeader>
+            <ShadcnDialogTitle>
+              {{ editingCategory ? 'Kategorie bearbeiten' : 'Neue Kategorie' }}
+            </ShadcnDialogTitle>
+          </ShadcnDialogHeader>
+          <CategoryForm
+            v-if="teamId"
+            :key="`${dialogSeq}-${editingCategory?.id ?? 'new'}`"
+            :team-id="teamId"
+            :next-sort-order="nextSortOrder"
+            :category="editingCategory"
+            @saved="onSaved"
+          />
         </div>
-        <CategoryForm
-          v-if="teamId"
-          :key="`${dialogSeq}-${editingCategory?.id ?? 'new'}`"
-          :team-id="teamId"
-          :next-sort-order="nextSortOrder"
-          :category="editingCategory"
-          @saved="onSaved"
-        />
-      </div>
-    </dialog>
+      </ShadcnDialogContent>
+    </ShadcnDialog>
   </section>
 </template>

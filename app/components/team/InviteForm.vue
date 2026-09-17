@@ -28,10 +28,7 @@ const fieldErrors = ref<{ email?: string; name?: string; jersey_number?: string 
 const submitError = ref<string | null>(null)
 const loading = ref(false)
 
-const onJerseyInput = (evt: Event) => {
-  const v = (evt.target as HTMLInputElement).value
-  jerseyNumber.value = v === '' ? null : Number(v)
-}
+const jerseyNumberModel = useNullableNumberModel(jerseyNumber)
 
 const submit = async () => {
   fieldErrors.value = {}
@@ -103,27 +100,18 @@ const submit = async () => {
 </script>
 
 <template>
-  <form
-    class="rounded border border-neutral-200 bg-white p-4 space-y-4"
-    novalidate
-    @submit.prevent="submit"
-  >
+  <form class="space-y-4" novalidate @submit.prevent="submit">
     <div class="flex flex-col sm:flex-row gap-3">
-      <label class="flex-1 block">
-        <span class="text-sm font-medium text-neutral-800">E-Mail</span>
-        <input
-          v-model="email"
-          type="email"
-          required
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-        <span v-if="fieldErrors.email" class="text-sm text-red-700">{{ fieldErrors.email }}</span>
-      </label>
+      <ShadcnLabel class="flex-1 block space-y-1">
+        <span>E-Mail</span>
+        <ShadcnInput v-model="email" type="email" required />
+        <span v-if="fieldErrors.email" class="block text-sm text-destructive">{{ fieldErrors.email }}</span>
+      </ShadcnLabel>
       <label class="block">
-        <span class="text-sm font-medium text-neutral-800">Rolle</span>
+        <span class="text-sm font-medium text-foreground">Rolle</span>
         <select
           v-model="role"
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 bg-white focus:border-neutral-900 focus:outline-none"
+          class="mt-1 w-full min-h-touch px-3 rounded-md border border-input bg-background accent-primary"
         >
           <option value="player">Spieler</option>
           <option value="trainer">Trainer</option>
@@ -131,46 +119,28 @@ const submit = async () => {
       </label>
     </div>
     <div v-if="role === 'player'" class="space-y-3">
-      <label class="block">
-        <span class="text-sm font-medium text-neutral-800">Name (optional)</span>
-        <input
-          v-model="playerName"
-          type="text"
-          class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-        />
-        <span v-if="fieldErrors.name" class="text-sm text-red-700">{{ fieldErrors.name }}</span>
-      </label>
+      <ShadcnLabel class="block space-y-1">
+        <span>Name (optional)</span>
+        <ShadcnInput v-model="playerName" type="text" />
+        <span v-if="fieldErrors.name" class="block text-sm text-destructive">{{ fieldErrors.name }}</span>
+      </ShadcnLabel>
       <div class="flex gap-3">
-        <label class="flex-1 block">
-          <span class="text-sm font-medium text-neutral-800">Trikotnummer (optional)</span>
-          <input
-            :value="jerseyNumber ?? ''"
-            type="number"
-            min="0"
-            class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-            @input="onJerseyInput"
-          />
-          <span v-if="fieldErrors.jersey_number" class="text-sm text-red-700">{{ fieldErrors.jersey_number }}</span>
-        </label>
-        <label class="flex-1 block">
-          <span class="text-sm font-medium text-neutral-800">Position (optional)</span>
-          <input
-            v-model="position"
-            type="text"
-            class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
-          />
-        </label>
+        <ShadcnLabel class="flex-1 block space-y-1">
+          <span>Trikotnummer (optional)</span>
+          <ShadcnInput v-model="jerseyNumberModel" type="number" min="0" />
+          <span v-if="fieldErrors.jersey_number" class="block text-sm text-destructive">{{ fieldErrors.jersey_number }}</span>
+        </ShadcnLabel>
+        <ShadcnLabel class="flex-1 block space-y-1">
+          <span>Position (optional)</span>
+          <ShadcnInput v-model="position" type="text" />
+        </ShadcnLabel>
       </div>
     </div>
-    <div class="flex items-center justify-end gap-3 border-t border-neutral-200 pt-4">
-      <p v-if="submitError" class="text-sm text-red-700 mr-auto" role="alert">{{ submitError }}</p>
-      <button
-        type="submit"
-        :disabled="loading"
-        class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-      >
+    <div class="flex items-center justify-end gap-3 border-t pt-4">
+      <p v-if="submitError" class="text-sm text-destructive mr-auto" role="alert">{{ submitError }}</p>
+      <ShadcnButton type="submit" :disabled="loading">
         {{ loading ? 'Sende…' : 'Einladen' }}
-      </button>
+      </ShadcnButton>
     </div>
   </form>
 </template>
