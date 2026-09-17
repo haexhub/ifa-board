@@ -44,3 +44,4 @@ supabase/.temp/
 
 # spaex
 .spaex/manifest.json.lock
+graphify-out/
