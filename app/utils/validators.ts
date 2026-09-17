@@ -14,7 +14,7 @@ export type PhotoMime = (typeof PHOTO_MIME_TYPES)[number]
 
 export const pointValueSchema = (min: number, max: number) =>
   z
-    .number({ invalid_type_error: 'Bitte eine Zahl eingeben' })
+    .number({ error: 'Bitte eine Zahl eingeben' })
     .int('Nur ganze Zahlen')
     .min(min, `Mindestens ${min}`)
     .max(max, `Höchstens ${max}`)
