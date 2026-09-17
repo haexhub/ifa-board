@@ -19,12 +19,26 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
+const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v)
+
 const schema = z
   .object({
     name: z.string().trim().min(1, 'Name ist erforderlich.'),
-    value_min: z.coerce.number().int('Ganzzahl erforderlich.'),
-    value_max: z.coerce.number().int('Ganzzahl erforderlich.'),
-    sort_order: z.coerce.number().int().min(1, 'Reihenfolge muss ≥ 1 sein.'),
+    value_min: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number({ error: 'Wert erforderlich.' }).int('Ganzzahl erforderlich.'),
+    ),
+    value_max: z.preprocess(
+      emptyToUndefined,
+      z.coerce.number({ error: 'Wert erforderlich.' }).int('Ganzzahl erforderlich.'),
+    ),
+    sort_order: z.preprocess(
+      emptyToUndefined,
+      z.coerce
+        .number({ error: 'Wert erforderlich.' })
+        .int('Ganzzahl erforderlich.')
+        .min(1, 'Reihenfolge muss ≥ 1 sein.'),
+    ),
     active: z.boolean(),
   })
   .refine((data) => data.value_max >= data.value_min, {
@@ -35,9 +49,9 @@ const schema = z
 const { create, update } = useCategories()
 
 const name = ref(props.category?.name ?? '')
-const valueMin = ref(props.category?.value_min ?? 0)
-const valueMax = ref(props.category?.value_max ?? 5)
-const sortOrder = ref(props.category?.sort_order ?? props.nextSortOrder)
+const valueMin = ref<number | ''>(props.category?.value_min ?? 0)
+const valueMax = ref<number | ''>(props.category?.value_max ?? 5)
+const sortOrder = ref<number | ''>(props.category?.sort_order ?? props.nextSortOrder)
 const active = ref(props.category?.active ?? true)
 const fieldErrors = ref<{
   name?: string

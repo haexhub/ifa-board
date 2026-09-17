@@ -23,6 +23,8 @@ const nuxtGlobals = {
   useProfile: 'readonly',
   useTeams: 'readonly',
   useTeamSettings: 'readonly',
+  useNumberModel: 'readonly',
+  useNullableNumberModel: 'readonly',
 }
 
 export default [
