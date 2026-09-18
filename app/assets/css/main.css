@@ -41,7 +41,7 @@
   body {
     @apply antialiased bg-background text-foreground;
   }
-  button,
+  button:not([role='checkbox']),
   [role='button'],
   input[type='submit'],
   input[type='button'] {
