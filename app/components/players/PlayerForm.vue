@@ -196,11 +196,11 @@ defineExpose({ loading })
       </ShadcnLabel>
     </div>
     <label class="flex items-center gap-2">
-      <ShadcnCheckbox v-model="consent" class="rounded-none" />
+      <ShadcnCheckbox v-model="consent" class="min-w-touch" />
       <span class="text-sm font-medium text-foreground">Foto-Einwilligung</span>
     </label>
     <label class="flex items-center gap-2">
-      <ShadcnCheckbox v-model="active" class="rounded-none" />
+      <ShadcnCheckbox v-model="active" class="min-w-touch" />
       <span class="text-sm font-medium text-foreground">Aktiv im Kader</span>
     </label>
     <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
