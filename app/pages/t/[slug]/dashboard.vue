@@ -157,27 +157,6 @@ const topThree = computed(() => ranking.value?.rows.slice(0, 3) ?? [])
       </ol>
     </section>
 
-    <nav class="flex flex-wrap gap-2">
-      <ShadcnButton as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/ranking`"> Vollständige Rangliste </NuxtLink>
-      </ShadcnButton>
-      <ShadcnButton as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/trainings`"> Trainings </NuxtLink>
-      </ShadcnButton>
-      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/team/members`"> Mitglieder </NuxtLink>
-      </ShadcnButton>
-      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/categories`"> Kategorien </NuxtLink>
-      </ShadcnButton>
-      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/players`"> Spieler </NuxtLink>
-      </ShadcnButton>
-      <ShadcnButton v-if="isTrainer" as-child variant="outline" size="sm">
-        <NuxtLink :to="`/t/${slug}/team/settings`"> Einstellungen </NuxtLink>
-      </ShadcnButton>
-    </nav>
-
     <RankingTable
       v-if="isTrainer && !loadError"
       :ranking="ranking"
