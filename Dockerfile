@@ -10,11 +10,6 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-# Dummy values for build — Nuxt needs something present at build time,
-# real values are injected at runtime via .env.
-ENV SUPABASE_URL=https://placeholder.supabase.co
-ENV SUPABASE_KEY=placeholder-key
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
