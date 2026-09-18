@@ -74,55 +74,47 @@ const submit = async () => {
 
 <template>
   <form class="space-y-4" novalidate data-testid="team-settings-form" @submit.prevent="submit">
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Team-Name</span>
-      <input
+    <ShadcnLabel class="block space-y-1">
+      <span>Team-Name</span>
+      <ShadcnInput
         v-model="name"
         type="text"
         required
         maxlength="80"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
         data-testid="team-settings-name-input"
       />
-      <span v-if="fieldErrors.name" class="text-sm text-red-700">{{ fieldErrors.name }}</span>
-    </label>
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Slug</span>
-      <input
+      <span v-if="fieldErrors.name" class="block text-sm text-destructive">{{ fieldErrors.name }}</span>
+    </ShadcnLabel>
+    <ShadcnLabel class="block space-y-1">
+      <span>Slug</span>
+      <ShadcnInput
         v-model="slug"
         type="text"
         required
         maxlength="64"
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
         data-testid="team-settings-slug-input"
       />
-      <span v-if="fieldErrors.slug" class="text-sm text-red-700">{{ fieldErrors.slug }}</span>
-      <p class="mt-1 text-sm text-amber-700">
+      <span v-if="fieldErrors.slug" class="block text-sm text-destructive">{{ fieldErrors.slug }}</span>
+      <p class="text-sm text-warning">
         Achtung: Öffentliche Links (z. B. die Rangliste) und Lesezeichen verweisen auf den
         aktuellen Slug. Eine Änderung macht alte Links ungültig.
       </p>
-    </label>
-    <label class="block">
-      <span class="text-sm font-medium text-neutral-800">Saisonstart</span>
-      <input
+    </ShadcnLabel>
+    <ShadcnLabel class="block space-y-1">
+      <span>Saisonstart</span>
+      <ShadcnInput
         v-model="seasonStart"
         type="date"
         required
-        class="mt-1 w-full min-h-touch px-3 rounded border border-neutral-300 focus:border-neutral-900 focus:outline-none"
         data-testid="team-settings-season-start-input"
       />
-      <span v-if="fieldErrors.season_start" class="text-sm text-red-700">{{
+      <span v-if="fieldErrors.season_start" class="block text-sm text-destructive">{{
         fieldErrors.season_start
       }}</span>
-    </label>
-    <button
-      type="submit"
-      :disabled="loading"
-      data-testid="team-settings-submit"
-      class="min-h-touch px-4 rounded bg-neutral-900 text-white font-medium hover:bg-neutral-800 disabled:opacity-60"
-    >
+    </ShadcnLabel>
+    <ShadcnButton type="submit" :disabled="loading" data-testid="team-settings-submit">
       {{ loading ? 'Speichere…' : 'Speichern' }}
-    </button>
-    <p v-if="submitError" class="text-sm text-red-700" role="alert">{{ submitError }}</p>
+    </ShadcnButton>
+    <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
 </template>
