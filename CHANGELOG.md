@@ -1,0 +1,58 @@
+# Changelog
+
+## [0.2.0](https://github.com/haexhub/playerboard/compare/v0.1.0...v0.2.0) (2026-09-18)
+
+
+### Features
+
+* adopt @haex-space/ui as Nuxt layer ([a090447](https://github.com/haexhub/playerboard/commit/a09044727df0626a7ddf1fcbe480fca03077aecf))
+* create categories inline from the training form ([10fbef5](https://github.com/haexhub/playerboard/commit/10fbef504b9c09415ccfd1ce9e6228059cc1fe72))
+* **foundational:** phase 2 — schema + RLS + auth wiring (T015-T041 minus T031) ([369f503](https://github.com/haexhub/playerboard/commit/369f503bb1621ea1a26ccb5a22c906baab9fad45))
+* **foundational:** supabase applied, types generated (T031) ([39a69bb](https://github.com/haexhub/playerboard/commit/39a69bbe5410d6d5ff6381d7c2299787abdde05f))
+* link players to invites; relax future-date check for timezone skew ([4813d8d](https://github.com/haexhub/playerboard/commit/4813d8d32ecd4dff36fd43978b1fae676f29917f))
+* member profile page (avatar + display name) ([bf4b82c](https://github.com/haexhub/playerboard/commit/bf4b82c222f9052a91ef0a51a4d422febbe3224a))
+* member profile page (avatar + display name) ([9c0d906](https://github.com/haexhub/playerboard/commit/9c0d9061499625596800c3fd97db507884383a73))
+* photos are optional for a training ([086ff03](https://github.com/haexhub/playerboard/commit/086ff037a46e1c1813ab848a963b9f422fb34016))
+* photos are optional for a training ([cc09df4](https://github.com/haexhub/playerboard/commit/cc09df4f1dc1225c04d4cb76f25a5102ff20d012))
+* **setup:** phase 1 complete — nuxt + supabase + tooling scaffolded (T001-T014) ([56e6815](https://github.com/haexhub/playerboard/commit/56e68158ed77955f9f2d162d69365523dcac8c98))
+* **US0:** passwordless onboarding, team founding & invitations + drizzle stack ([fa836e6](https://github.com/haexhub/playerboard/commit/fa836e65ac11908f30bc1992926778b13897bf07))
+* **US1:** trainer records point entries + photos (T061-T072) ([264da29](https://github.com/haexhub/playerboard/commit/264da2992e983e8f41bb6d643890145cfcaa621c))
+* **US1:** trainer records point entries + photos (T061-T072) ([2093a69](https://github.com/haexhub/playerboard/commit/2093a69dd8677e3920e106cef51ecc6f64f56bca))
+* **US2:** player ranking + time-series dashboard (T073-T083) ([fad29cb](https://github.com/haexhub/playerboard/commit/fad29cb7f4c89ed9700497ffcca3c983f7cfb025))
+* **US2:** player ranking + time-series dashboard (T073-T083) ([1d16e68](https://github.com/haexhub/playerboard/commit/1d16e6822c184b270fd38fc434e8bfe80f4acba5))
+* **US3:** trainer manages point categories ([04a1214](https://github.com/haexhub/playerboard/commit/04a1214652f6c02c52e40eb957c56b28ad5029bd))
+* **US3:** trainer manages point categories (T084-T088) ([ad33dbb](https://github.com/haexhub/playerboard/commit/ad33dbb3c5570fd5f3824c6321cb076ef5c252b5))
+* **US4:** trainer manages the player roster ([f024d69](https://github.com/haexhub/playerboard/commit/f024d69d108db91abfacb49503626e606126d301))
+* **US4:** trainer manages the player roster (T089-T093) ([621495c](https://github.com/haexhub/playerboard/commit/621495c43bc9a5d9b538566ca268fd80a5361bc7))
+* **US5:** anonymous public ranking per team ([89c7ea9](https://github.com/haexhub/playerboard/commit/89c7ea98924597cf0a421364157342e5fbc25985))
+* **US5:** anonymous public ranking per team (T094-T098) ([32cef36](https://github.com/haexhub/playerboard/commit/32cef36d9804569b919fd8742b081e4c0853c0b3))
+* **US6:** training photo gallery with consent gating ([be5e3fe](https://github.com/haexhub/playerboard/commit/be5e3fe8bceabe5a6d4dfb1ba5947935605faa99))
+* **US6:** training photo gallery with consent gating (T099-T102) ([f3db807](https://github.com/haexhub/playerboard/commit/f3db807c4da251dade8088a632359f60cc5715cc))
+
+
+### Bug Fixes
+
+* adapt server auth to Supabase v2 claims ([41539d0](https://github.com/haexhub/playerboard/commit/41539d003d0b2c7fbe133b5cbd3123dd990cfdc9))
+* address category review findings ([80f0247](https://github.com/haexhub/playerboard/commit/80f0247c45056ddaddd4a374ec9bb160fc9b376a))
+* address CodeRabbit review findings ([b9d1edd](https://github.com/haexhub/playerboard/commit/b9d1edd304697d0c9d34a21862f6823162539d14))
+* address CodeRabbit review on forms-dialogs PR ([462deca](https://github.com/haexhub/playerboard/commit/462decadd52e55f61a424132edfc60583d6f5d58))
+* address Docker image review findings ([9f37695](https://github.com/haexhub/playerboard/commit/9f3769521e3de1a6b56130f67a5ea56beab8e0c1))
+* address follow-up review findings ([6b6b19f](https://github.com/haexhub/playerboard/commit/6b6b19f931ccc536196f3af3077c929b9945eed2))
+* address public ranking review findings ([ba3cbd2](https://github.com/haexhub/playerboard/commit/ba3cbd286d38be1d6e04e6b1ff3165761798a236))
+* address pull request review findings ([bf98708](https://github.com/haexhub/playerboard/commit/bf987080e6283c10e4aefdf9b9e747cb2ab4bbd4))
+* address pull request review findings ([5161d51](https://github.com/haexhub/playerboard/commit/5161d512383ebfa5756d32b813881e6a048c1291))
+* address pull request review findings ([505132d](https://github.com/haexhub/playerboard/commit/505132dcd45452c61e703cedf997799768818145))
+* address pull request review findings ([4fdc534](https://github.com/haexhub/playerboard/commit/4fdc5340ecfe77f1801b262f9ba8ed4bf430aa81))
+* address pull request review findings ([a269577](https://github.com/haexhub/playerboard/commit/a26957747a831781488e7488516954bc6c3e85b2))
+* address pull request review findings ([d6cf53f](https://github.com/haexhub/playerboard/commit/d6cf53fdd2494bc52a86df720fbe18b3b08c3974))
+* **auth:** magic link always redirects via /callback ([0b158ce](https://github.com/haexhub/playerboard/commit/0b158ce95c0bc86547803f1ddc19b71eb29e2c95))
+* close follow-up review findings ([b7a944f](https://github.com/haexhub/playerboard/commit/b7a944f45032b873ba2806a09a8dc7c961e35aae))
+* **db:** serialize concurrent integrity checks ([a4a9649](https://github.com/haexhub/playerboard/commit/a4a96494669ed86305016bb2713305bc4c170ec4))
+* gate training photos on consent ([8472dac](https://github.com/haexhub/playerboard/commit/8472dacd8fbe1599d064cfd0fd3619b66bc7375f))
+* harden auth redirect and seed target ([bc493a1](https://github.com/haexhub/playerboard/commit/bc493a198c6832d6f349ca87c01a0d03d2023bb7))
+* preserve player table header semantics ([9e7bc71](https://github.com/haexhub/playerboard/commit/9e7bc71502c63a4df4e8dbf28eb1c78f588ab78e))
+* **security:** address pull request review findings ([ce02608](https://github.com/haexhub/playerboard/commit/ce026080447a421081e61b4788330249b08d3709))
+* **security:** harden review findings ([0c9b9db](https://github.com/haexhub/playerboard/commit/0c9b9dba332a31672c239b6631ef9d4850cfa21d))
+* show missing players/categories hint on training detail page ([ddb2674](https://github.com/haexhub/playerboard/commit/ddb26745776f79ee4b0b70617aa155d6eb84149b))
+* surface category-name uniqueness as a friendly form error ([59ed61f](https://github.com/haexhub/playerboard/commit/59ed61f0a9854af013b9a5ca7562ad2664cd39f9))
+* use Supabase v2 claims in client ([312a443](https://github.com/haexhub/playerboard/commit/312a443d6864542c3f0cfa907ae4a6c98811ad8a))
