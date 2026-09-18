@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { Menu } from '@lucide/vue'
+import { ref } from 'vue'
 import TeamSwitcher from '~/components/team/TeamSwitcher.vue'
 
-const route = useRoute()
 const user = useSupabaseUser()
 const client = useSupabaseClient()
 const signOutError = ref<string | null>(null)
 
-const currentSlug = computed(() => (route.params as { slug?: string }).slug ?? null)
+const { currentSlug, isTrainer } = useTeamContext()
 
 const signOut = async () => {
   signOutError.value = null
@@ -38,9 +38,63 @@ const signOut = async () => {
           <span v-if="user?.email" class="text-sm text-muted-foreground hidden sm:inline">
             {{ user.email }}
           </span>
-          <ShadcnButton type="button" variant="outline" size="sm" @click="signOut">
-            Abmelden
-          </ShadcnButton>
+          <ShadcnSheet>
+            <ShadcnSheetTrigger as-child>
+              <ShadcnButton type="button" variant="outline" size="icon">
+                <Menu class="size-4" />
+                <span class="sr-only">Menü öffnen</span>
+              </ShadcnButton>
+            </ShadcnSheetTrigger>
+            <ShadcnSheetContent side="left" class="flex flex-col gap-0">
+              <ShadcnSheetHeader>
+                <ShadcnSheetTitle>Menü</ShadcnSheetTitle>
+                <ShadcnSheetDescription>Navigation und Konto</ShadcnSheetDescription>
+              </ShadcnSheetHeader>
+              <nav class="flex flex-col gap-1 px-4">
+                <template v-if="currentSlug">
+                  <ShadcnSheetClose as-child>
+                    <ShadcnButton as-child variant="ghost" class="justify-start">
+                      <NuxtLink :to="`/t/${currentSlug}/ranking`">Vollständige Rangliste</NuxtLink>
+                    </ShadcnButton>
+                  </ShadcnSheetClose>
+                  <ShadcnSheetClose as-child>
+                    <ShadcnButton as-child variant="ghost" class="justify-start">
+                      <NuxtLink :to="`/t/${currentSlug}/trainings`">Trainings</NuxtLink>
+                    </ShadcnButton>
+                  </ShadcnSheetClose>
+                  <template v-if="isTrainer">
+                    <ShadcnSheetClose as-child>
+                      <ShadcnButton as-child variant="ghost" class="justify-start">
+                        <NuxtLink :to="`/t/${currentSlug}/team/members`">Mitglieder</NuxtLink>
+                      </ShadcnButton>
+                    </ShadcnSheetClose>
+                    <ShadcnSheetClose as-child>
+                      <ShadcnButton as-child variant="ghost" class="justify-start">
+                        <NuxtLink :to="`/t/${currentSlug}/categories`">Kategorien</NuxtLink>
+                      </ShadcnButton>
+                    </ShadcnSheetClose>
+                    <ShadcnSheetClose as-child>
+                      <ShadcnButton as-child variant="ghost" class="justify-start">
+                        <NuxtLink :to="`/t/${currentSlug}/players`">Spieler</NuxtLink>
+                      </ShadcnButton>
+                    </ShadcnSheetClose>
+                    <ShadcnSheetClose as-child>
+                      <ShadcnButton as-child variant="ghost" class="justify-start">
+                        <NuxtLink :to="`/t/${currentSlug}/team/settings`">Einstellungen</NuxtLink>
+                      </ShadcnButton>
+                    </ShadcnSheetClose>
+                  </template>
+                </template>
+              </nav>
+              <ShadcnSheetFooter>
+                <ShadcnSheetClose as-child>
+                  <ShadcnButton type="button" variant="outline" @click="signOut">
+                    Abmelden
+                  </ShadcnButton>
+                </ShadcnSheetClose>
+              </ShadcnSheetFooter>
+            </ShadcnSheetContent>
+          </ShadcnSheet>
         </div>
       </div>
       <p v-if="signOutError" class="px-4 pb-2 text-center text-sm text-destructive" role="alert">
