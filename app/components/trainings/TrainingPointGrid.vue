@@ -7,9 +7,15 @@ import { pointValueSchema } from '~/utils/validators'
 
 const props = defineProps<{
   trainingId: string
+  slug: string
   players: ActivePlayer[]
   categories: ActiveCategory[]
   initialEntries?: Array<{ player_id: string; category_id: string; value: number }>
+}>()
+
+defineEmits<{
+  (e: 'add-player'): void
+  (e: 'add-category'): void
 }>()
 
 type CellKey = `${string}:${string}`
@@ -128,6 +134,36 @@ const onBlur = (player: ActivePlayer, category: ActiveCategory) => {
   void commitCell(player.id, category.id, category)
 }
 
+const sliderValue = (playerId: string, categoryId: string, category: ActiveCategory) => {
+  const v = cells[key(playerId, categoryId)]?.value
+  return [v ?? category.value_min]
+}
+
+const onSliderInput = (playerId: string, categoryId: string, values: number[] | undefined) => {
+  const k = key(playerId, categoryId)
+  const cell = cells[k]
+  if (!cell) return
+  cellRevisions.set(k, (cellRevisions.get(k) ?? 0) + 1)
+  cell.status = 'idle'
+  cell.value = values?.[0] ?? null
+  dirtyCount.value += 1
+}
+
+const onSliderCommit = (player: ActivePlayer, category: ActiveCategory) => {
+  void commitCell(player.id, category.id, category)
+}
+
+const resetCell = (player: ActivePlayer, category: ActiveCategory) => {
+  const k = key(player.id, category.id)
+  const cell = cells[k]
+  if (!cell) return
+  cellRevisions.set(k, (cellRevisions.get(k) ?? 0) + 1)
+  cell.status = 'idle'
+  cell.value = null
+  dirtyCount.value += 1
+  void commitCell(player.id, category.id, category)
+}
+
 defineExpose({ savingCount, dirtyCount })
 </script>
 
@@ -140,7 +176,19 @@ defineExpose({ savingCount, dirtyCount })
             scope="col"
             class="sticky left-0 z-20 bg-neutral-100 border-b border-r border-neutral-200 px-3 py-2 text-left font-semibold min-w-[10rem]"
           >
-            Spieler:in
+            <div class="flex items-center gap-1">
+              Spieler:in
+              <button
+                type="button"
+                aria-label="Spieler:in hinzufügen"
+                title="Spieler:in hinzufügen"
+                data-testid="training-grid-add-player-button"
+                class="min-h-touch min-w-touch inline-flex items-center justify-center rounded border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+                @click="$emit('add-player')"
+              >
+                +
+              </button>
+            </div>
           </th>
           <th
             v-for="c in categories"
@@ -153,16 +201,40 @@ defineExpose({ savingCount, dirtyCount })
               {{ c.value_min }}–{{ c.value_max }}
             </span>
           </th>
+          <th
+            scope="col"
+            class="border-b border-neutral-200 px-2 py-2 text-left font-semibold"
+          >
+            <button
+              type="button"
+              aria-label="Kategorie hinzufügen"
+              title="Kategorie hinzufügen"
+              data-testid="training-grid-add-category-button"
+              class="min-h-touch min-w-touch inline-flex items-center justify-center rounded border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"
+              @click="$emit('add-category')"
+            >
+              +
+            </button>
+          </th>
         </tr>
       </thead>
       <tbody>
+        <tr v-if="!players.length">
+          <td
+            :colspan="categories.length + 2"
+            class="px-3 py-3 text-sm text-neutral-500"
+            data-testid="training-grid-empty-players"
+          >
+            Noch keine Spieler:innen.
+          </td>
+        </tr>
         <tr v-for="p in players" :key="p.id" class="min-h-touch">
           <th
             scope="row"
             class="sticky left-0 bg-white border-b border-r border-neutral-200 px-3 py-2 text-left font-medium align-middle min-h-touch"
           >
             <span class="text-neutral-500 mr-1">{{ jerseyLabel(p) }}</span>
-            {{ p.name }}
+            <NuxtLink :to="`/t/${slug}/players/${p.id}`" class="underline">{{ p.name }}</NuxtLink>
           </th>
           <td
             v-for="c in categories"
@@ -170,42 +242,64 @@ defineExpose({ savingCount, dirtyCount })
             class="border-b border-neutral-200 px-1 py-1 align-middle"
             :data-testid="`cell-${p.id}-${c.id}`"
           >
-            <div class="flex items-center gap-1">
-              <input
-                type="number"
-                inputmode="numeric"
+            <div class="flex flex-col gap-1 w-32">
+              <div class="flex items-center gap-1">
+                <input
+                  type="number"
+                  inputmode="numeric"
+                  :min="c.value_min"
+                  :max="c.value_max"
+                  :value="cells[key(p.id, c.id)]?.value ?? ''"
+                  :aria-label="`${p.name} — ${c.name}`"
+                  class="min-h-touch w-14 rounded border border-neutral-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                  :class="{
+                    'border-red-500': cells[key(p.id, c.id)]?.status === 'error',
+                    'border-green-500': cells[key(p.id, c.id)]?.status === 'saved',
+                  }"
+                  @input="onInput(p.id, c.id, $event)"
+                  @blur="onBlur(p, c)"
+                />
+                <button
+                  v-if="cells[key(p.id, c.id)]?.value !== null"
+                  type="button"
+                  aria-label="Wert zurücksetzen"
+                  title="Wert zurücksetzen"
+                  class="min-h-touch min-w-touch inline-flex items-center justify-center text-neutral-400 hover:text-neutral-700"
+                  @click="resetCell(p, c)"
+                >
+                  ×
+                </button>
+                <span
+                  v-if="cells[key(p.id, c.id)]?.status === 'saving'"
+                  class="text-xs text-neutral-500"
+                >
+                  …
+                </span>
+                <span
+                  v-else-if="cells[key(p.id, c.id)]?.status === 'saved'"
+                  class="text-xs text-green-700"
+                  aria-label="gespeichert"
+                >
+                  ✓
+                </span>
+                <span
+                  v-else-if="cells[key(p.id, c.id)]?.status === 'error'"
+                  class="text-xs text-red-700"
+                  :title="cells[key(p.id, c.id)]?.error"
+                >
+                  !
+                </span>
+              </div>
+              <ShadcnSlider
+                :model-value="sliderValue(p.id, c.id, c)"
                 :min="c.value_min"
                 :max="c.value_max"
-                :value="cells[key(p.id, c.id)]?.value ?? ''"
-                :aria-label="`${p.name} — ${c.name}`"
-                class="min-h-touch w-20 rounded border border-neutral-300 px-2 py-1 text-right focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                :class="{
-                  'border-red-500': cells[key(p.id, c.id)]?.status === 'error',
-                  'border-green-500': cells[key(p.id, c.id)]?.status === 'saved',
-                }"
-                @input="onInput(p.id, c.id, $event)"
-                @blur="onBlur(p, c)"
+                :step="1"
+                :aria-label="`${p.name} — ${c.name} (Slider)`"
+                :class="{ 'opacity-40': cells[key(p.id, c.id)]?.value === null }"
+                @update:model-value="onSliderInput(p.id, c.id, $event)"
+                @value-commit="onSliderCommit(p, c)"
               />
-              <span
-                v-if="cells[key(p.id, c.id)]?.status === 'saving'"
-                class="text-xs text-neutral-500"
-              >
-                …
-              </span>
-              <span
-                v-else-if="cells[key(p.id, c.id)]?.status === 'saved'"
-                class="text-xs text-green-700"
-                aria-label="gespeichert"
-              >
-                ✓
-              </span>
-              <span
-                v-else-if="cells[key(p.id, c.id)]?.status === 'error'"
-                class="text-xs text-red-700"
-                :title="cells[key(p.id, c.id)]?.error"
-              >
-                !
-              </span>
             </div>
           </td>
         </tr>

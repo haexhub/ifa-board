@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import CategoryForm from '~/components/categories/CategoryForm.vue'
+import PlayerForm from '~/components/players/PlayerForm.vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
 import TrainingPhotoGallery from '~/components/trainings/TrainingPhotoGallery.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
@@ -32,6 +34,51 @@ const photos = ref<TrainingPhotoView[]>([])
 const consentStatus = ref<ConsentStatus>('clean')
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
+
+const trainingTeamId = computed(() => training.value?.team_id ?? '')
+
+const isCategoryDialogOpen = ref(false)
+const categoryDialogSeq = ref(0)
+const categoriesError = ref<string | null>(null)
+const nextCategorySortOrder = computed(
+  () => categories.value.reduce((max, c) => Math.max(max, c.sort_order), 0) + 1,
+)
+
+const openCategoryDialog = () => {
+  categoryDialogSeq.value += 1
+  isCategoryDialogOpen.value = true
+}
+
+const onCategorySaved = async () => {
+  isCategoryDialogOpen.value = false
+  categoriesError.value = null
+  try {
+    categories.value = await listCategories(trainingTeamId.value)
+  } catch (err) {
+    categoriesError.value =
+      err instanceof Error ? err.message : 'Kategorien konnten nicht aktualisiert werden'
+  }
+}
+
+const isPlayerDialogOpen = ref(false)
+const playerDialogSeq = ref(0)
+const playersError = ref<string | null>(null)
+const playerFormRef = ref<InstanceType<typeof PlayerForm> | null>(null)
+
+const openPlayerDialog = () => {
+  playerDialogSeq.value += 1
+  isPlayerDialogOpen.value = true
+}
+
+const onPlayerSaved = async () => {
+  isPlayerDialogOpen.value = false
+  playersError.value = null
+  try {
+    players.value = await listPlayers(trainingTeamId.value)
+  } catch (err) {
+    playersError.value = err instanceof Error ? err.message : 'Spieler konnten nicht aktualisiert werden'
+  }
+}
 
 type TrainingDetailData = {
   training: TrainingRow | null
@@ -175,26 +222,65 @@ const statusLabel = computed(() => (training.value?.status === 'saved' ? 'Gespei
       <ConsentWarningBanner :players="players" />
 
       <TrainingPointGrid
-        v-if="players.length && categories.length"
         :training-id="training.id"
+        :slug="slug"
         :players="players"
         :categories="categories"
         :initial-entries="initialEntries"
+        @add-player="openPlayerDialog"
+        @add-category="openCategoryDialog"
       />
-      <p v-if="!players.length" class="text-sm text-neutral-500" data-testid="no-players-hint">
-        Es sind keine aktiven Spieler:innen im Team. Bitte zuerst über
-        <NuxtLink :to="`/t/${slug}/players`" class="underline">Spieler-Verwaltung</NuxtLink>
-        anlegen.
-      </p>
-      <p
-        v-if="!categories.length"
-        class="text-sm text-neutral-500"
-        data-testid="no-categories-hint"
-      >
-        Es sind keine aktiven Kategorien im Team. Bitte zuerst über
-        <NuxtLink :to="`/t/${slug}/categories`" class="underline">Kategorien</NuxtLink>
-        anlegen.
-      </p>
+      <p v-if="categoriesError" class="text-sm text-red-700" role="alert">{{ categoriesError }}</p>
+      <p v-if="playersError" class="text-sm text-red-700" role="alert">{{ playersError }}</p>
+
+      <ShadcnDialog v-model:open="isCategoryDialogOpen">
+        <ShadcnDialogContent>
+          <div data-testid="training-category-dialog">
+            <ShadcnDialogHeader>
+              <ShadcnDialogTitle>Neue Kategorie</ShadcnDialogTitle>
+            </ShadcnDialogHeader>
+            <CategoryForm
+              v-if="trainingTeamId"
+              :key="categoryDialogSeq"
+              :team-id="trainingTeamId"
+              :next-sort-order="nextCategorySortOrder"
+              :category="null"
+              @saved="onCategorySaved"
+            />
+          </div>
+        </ShadcnDialogContent>
+      </ShadcnDialog>
+
+      <ShadcnDialog v-model:open="isPlayerDialogOpen">
+        <ShadcnDialogContent>
+          <div data-testid="training-player-dialog" class="space-y-4">
+            <ShadcnDialogHeader>
+              <ShadcnDialogTitle>Neuer Spieler</ShadcnDialogTitle>
+            </ShadcnDialogHeader>
+            <PlayerForm
+              v-if="trainingTeamId"
+              ref="playerFormRef"
+              :key="playerDialogSeq"
+              :team-id="trainingTeamId"
+              :player="null"
+              @saved="onPlayerSaved"
+            />
+            <ShadcnDialogFooter>
+              <ShadcnDialogClose as-child>
+                <ShadcnButton type="button" variant="outline">Schließen</ShadcnButton>
+              </ShadcnDialogClose>
+              <ShadcnButton
+                type="submit"
+                form="player-form"
+                :disabled="playerFormRef?.loading"
+                data-testid="player-form-submit"
+              >
+                {{ playerFormRef?.loading ? 'Speichere…' : 'Speichern' }}
+              </ShadcnButton>
+            </ShadcnDialogFooter>
+          </div>
+        </ShadcnDialogContent>
+      </ShadcnDialog>
 
       <TrainingPhotoUpload
         v-if="teamId"

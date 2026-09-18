@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import CategoryForm from '~/components/categories/CategoryForm.vue'
+import PlayerForm from '~/components/players/PlayerForm.vue'
 import ConsentWarningBanner from '~/components/trainings/ConsentWarningBanner.vue'
 import TrainingPhotoUpload from '~/components/trainings/TrainingPhotoUpload.vue'
 import TrainingPointGrid from '~/components/trainings/TrainingPointGrid.vue'
@@ -55,6 +56,26 @@ const onCategorySaved = async () => {
   } catch (err) {
     categoriesError.value =
       err instanceof Error ? err.message : 'Kategorien konnten nicht aktualisiert werden'
+  }
+}
+
+const isPlayerDialogOpen = ref(false)
+const playerDialogSeq = ref(0)
+const playersError = ref<string | null>(null)
+const playerFormRef = ref<InstanceType<typeof PlayerForm> | null>(null)
+
+const openPlayerDialog = () => {
+  playerDialogSeq.value += 1
+  isPlayerDialogOpen.value = true
+}
+
+const onPlayerSaved = async () => {
+  isPlayerDialogOpen.value = false
+  playersError.value = null
+  try {
+    players.value = await listPlayers(teamId.value)
+  } catch (err) {
+    playersError.value = err instanceof Error ? err.message : 'Spieler konnten nicht aktualisiert werden'
   }
 }
 
@@ -155,39 +176,18 @@ const onSave = async () => {
 
     <ConsentWarningBanner :players="players" />
 
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-foreground">Kategorien</h2>
-      <ShadcnButton
-        type="button"
-        data-testid="training-new-category-button"
-        variant="outline"
-        size="sm"
-        @click="openCategoryDialog"
-      >
-        + Kategorie hinzufügen
-      </ShadcnButton>
-    </div>
     <p v-if="categoriesError" class="text-sm text-destructive" role="alert">{{ categoriesError }}</p>
+    <p v-if="playersError" class="text-sm text-destructive" role="alert">{{ playersError }}</p>
 
     <TrainingPointGrid
-      v-if="training && players.length && categories.length"
+      v-if="training"
       :training-id="training.id"
+      :slug="slug"
       :players="players"
       :categories="categories"
+      @add-player="openPlayerDialog"
+      @add-category="openCategoryDialog"
     />
-    <p v-else-if="!players.length" class="text-sm text-muted-foreground" data-testid="no-players-hint">
-      Es sind keine aktiven Spieler:innen im Team. Bitte zuerst über
-      <NuxtLink :to="`/t/${slug}/players`" class="underline">Spieler-Verwaltung</NuxtLink>
-      anlegen.
-    </p>
-    <p
-      v-else-if="!categories.length"
-      class="text-sm text-muted-foreground"
-      data-testid="no-categories-hint"
-    >
-      Es sind keine aktiven Kategorien im Team. Über „+ Kategorie hinzufügen" oben kannst du
-      direkt eine anlegen.
-    </p>
 
     <ShadcnDialog v-model:open="isCategoryDialogOpen">
       <ShadcnDialogContent>
@@ -203,6 +203,37 @@ const onSave = async () => {
             :category="null"
             @saved="onCategorySaved"
           />
+        </div>
+      </ShadcnDialogContent>
+    </ShadcnDialog>
+
+    <ShadcnDialog v-model:open="isPlayerDialogOpen">
+      <ShadcnDialogContent>
+        <div data-testid="training-player-dialog" class="space-y-4">
+          <ShadcnDialogHeader>
+            <ShadcnDialogTitle>Neuer Spieler</ShadcnDialogTitle>
+          </ShadcnDialogHeader>
+          <PlayerForm
+            v-if="teamId"
+            ref="playerFormRef"
+            :key="playerDialogSeq"
+            :team-id="teamId"
+            :player="null"
+            @saved="onPlayerSaved"
+          />
+          <ShadcnDialogFooter>
+            <ShadcnDialogClose as-child>
+              <ShadcnButton type="button" variant="outline">Schließen</ShadcnButton>
+            </ShadcnDialogClose>
+            <ShadcnButton
+              type="submit"
+              form="player-form"
+              :disabled="playerFormRef?.loading"
+              data-testid="player-form-submit"
+            >
+              {{ playerFormRef?.loading ? 'Speichere…' : 'Speichern' }}
+            </ShadcnButton>
+          </ShadcnDialogFooter>
         </div>
       </ShadcnDialogContent>
     </ShadcnDialog>
