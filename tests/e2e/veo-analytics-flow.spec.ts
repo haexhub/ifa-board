@@ -152,6 +152,12 @@ test.describe('T003-veo-analytics — Veo camera analytics page', () => {
     setupPage(pageA)
     await foundTeam(pageA, emailA, `Veo A ${suffix}`, slugA)
     const teamIdA = await teamIdForSlug(slugA)
+    await restUpsert('veo_team_mappings', 'team_id', {
+      team_id: teamIdA,
+      veo_club_slug: 'test-club',
+      veo_team_slug: 'test-team',
+      enabled: true,
+    })
 
     await seedMatch(teamIdA, `match-draw-${suffix}`, 'SG Neukirchen', 2, 2, [
       { team_association: 'own', stat_type: 'football_goal_total', category: 'attacking', value: 2 },

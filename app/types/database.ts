@@ -488,8 +488,8 @@ export type Database = {
           id: string
           last_synced_at: string
           opponent_name: string
-          opponent_score: number | null
-          own_score: number | null
+          opponent_score: number
+          own_score: number
           played_at: string
           team_id: string
           veo_match_id: string
@@ -500,8 +500,8 @@ export type Database = {
           id?: string
           last_synced_at?: string
           opponent_name: string
-          opponent_score?: number | null
-          own_score?: number | null
+          opponent_score: number
+          own_score: number
           played_at: string
           team_id: string
           veo_match_id: string
@@ -512,8 +512,8 @@ export type Database = {
           id?: string
           last_synced_at?: string
           opponent_name?: string
-          opponent_score?: number | null
-          own_score?: number | null
+          opponent_score?: number
+          own_score?: number
           played_at?: string
           team_id?: string
           veo_match_id?: string
@@ -669,6 +669,7 @@ export type Database = {
       is_member: { Args: { p_team: string }; Returns: boolean }
       is_profile_visible: { Args: { p_profile: string }; Returns: boolean }
       is_trainer: { Args: { p_team: string }; Returns: boolean }
+      is_veo_enabled: { Args: { p_team: string }; Returns: boolean }
       reorder_point_categories: {
         Args: { p_items: Json; p_team: string }
         Returns: undefined
@@ -808,4 +809,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

@@ -14,7 +14,7 @@
 - Q: Wie zeitnah müssen neue Match-Stats nach einem Spiel in Playerboard sichtbar sein? → A: Täglicher Batch reicht — einmal pro Nacht synchronisieren ist ausreichend.
 - Q: Wer soll den Sync-Status (letzter erfolgreicher Sync / Fehler-Hinweis) aus User Story 3 sehen können? → A: Alle Team-Mitglieder (Trainer und Spieler), nicht nur Trainer/Admin — der Status selbst ist keine sensible Information.
 - Q: Was passiert mit bereits übernommenen Spieldaten, wenn das zugehörige Spiel in Veo nachträglich gelöscht oder auf privat gestellt wird? → A: Sie bleiben dauerhaft sichtbar; es gibt keinen aktiven Abgleich/Löschmechanismus gegen den Veo-Bestand.
-- Q: Wie wird festgelegt, welches Playerboard-Team Veo-Daten sehen darf, und wer darf das ändern? → A: Explizit von einem Platform-Admin über eine Einstellungs-Oberfläche konfiguriert (Team-Zuordnung + Freischaltung), nicht automatisch aus einer festen Konfiguration abgeleitet — kein Team hat ohne diese Freischaltung Zugriff.
+- Q: Wie wird festgelegt, welches Playerboard-Team Veo-Daten sehen darf, und wer darf das ändern? → A: Die Freischaltung ist eine Platform-Admin-Entscheidung und wird in v1 über einen geschützten direkten Datenbankeintrag des Deployment-Operators umgesetzt; die Einstellungs-Oberfläche folgt im separaten Feature "Platform-Administration". Sie wird nicht automatisch aus einer festen Konfiguration abgeleitet — kein Team hat ohne diese Freischaltung Zugriff.
 - Q: Soll die Platform-Admin-Rolle (inkl. Ernennen/Entfernen weiterer Admins) Teil dieser Spec sein? → A: Nein — eigenes, vorgelagertes Feature ("Platform-Administration"); diese Spec setzt darauf auf und liefert nur die Veo-spezifische Team-Zuordnung innerhalb dieser Verwaltung.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -106,35 +106,39 @@ bzw. veralteten Sync, ohne falsche oder widersprüchliche Daten anzuzeigen.
 
 ---
 
-### User Story 4 - Platform-Admin schaltet Veo-Zugriff für ein Team frei (Priority: P1)
+### User Story 4 - Veo-Zugriff wird explizit für ein Team freigeschaltet (Priority: P1)
 
-Ein Platform-Admin legt über eine Einstellungs-Oberfläche fest, für welches
-Playerboard-Team die Veo-Integration aktiv ist, und hinterlegt dafür das
-zugehörige Veo-Club-/Team-Kürzel. Ohne diese explizite Freischaltung sieht
-kein Team Veo-Daten — auch nicht versehentlich durch eine falsche oder
-fehlende Konfiguration.
+In v1 setzt der Deployment-Operator die Freischaltungsentscheidung des
+Platform-Admins über einen geschützten direkten Datenbankeintrag um und
+hinterlegt dort das zugehörige Veo-Club-/Team-Kürzel. Die Einstellungs-
+Oberfläche gehört zum separaten Feature "Platform-Administration". Ohne diese
+explizite Freischaltung sieht kein Team Veo-Daten — auch nicht versehentlich
+durch eine falsche oder fehlende Konfiguration.
 
 **Why this priority**: User Story 1-3 dürfen aus Sicherheitsgründen nicht
 ohne diese Freischaltung ausgeliefert werden — ein Team darf niemals
-automatisch Zugriff auf Veo-Daten bekommen. Baut auf der Platform-Admin-Rolle
-des vorgelagerten Features "Platform-Administration" auf (separate Spec) und
-ist Voraussetzung für den produktiven Einsatz von User Story 1-3.
+automatisch Zugriff auf Veo-Daten bekommen. Die spätere Platform-Admin-
+Oberfläche baut auf dem vorgelagerten Feature "Platform-Administration" auf;
+bis dahin ist die manuelle, dokumentierte Ops-Aktion der einzige v1-Weg.
 
-**Independent Test**: Ein Platform-Admin aktiviert Veo für ein Team mit
-Club-/Team-Kürzel; nur dieses Team hat danach Zugriff. Ein Team, für das
-nichts aktiviert wurde, sieht weiterhin nichts.
+**Independent Test**: Der Deployment-Operator legt die dokumentierte
+`veo_team_mappings`-Zeile für ein Team mit Club-/Team-Kürzel an; nur dieses
+Team hat danach Zugriff. Ein Team ohne aktivierte Zeile sieht weiterhin
+nichts.
 
 **Acceptance Scenarios**:
 
-1. **Given** ein Platform-Admin ist eingeloggt, **When** er ein Team für die
-   Veo-Integration aktiviert und das Club-/Team-Kürzel hinterlegt, **Then**
-   kann dieses Team ab dem nächsten Sync-Lauf Veo-Daten sehen.
-2. **Given** für ein Team wurde nichts aktiviert, **When** ein Mitglied
+1. **Given** der Platform-Admin hat die Freischaltung entschieden, **When** der
+   Deployment-Operator die Mapping-Zeile mit `enabled = true` und dem
+   Club-/Team-Kürzel direkt in der Datenbank anlegt, **Then** kann dieses Team
+   ab dem nächsten Sync-Lauf Veo-Daten sehen.
+2. **Given** für ein Team wurde keine Mapping-Zeile aktiviert, **When** ein Mitglied
    dieses Teams die Analytics-Seite öffnet, **Then** sieht es keine
    Veo-Daten.
-3. **Given** ein Platform-Admin deaktiviert die Veo-Integration für ein
-   zuvor aktiviertes Team, **When** der nächste Sync-Lauf läuft, **Then**
-   werden für dieses Team keine neuen Daten mehr synchronisiert.
+3. **Given** der Deployment-Operator setzt `enabled = false` oder löscht die
+   Mapping-Zeile, **When** ein Mitglied die Analytics-Seite öffnet, **Then**
+   sieht es weder neue noch bereits gespeicherte Veo-Daten; die Daten bleiben
+   für eine spätere Reaktivierung gespeichert.
 
 ---
 
@@ -144,9 +148,11 @@ nichts aktiviert wurde, sieht weiterhin nichts.
   gelöscht oder auf privat gestellt: Playerboard zeigt die zuletzt
   synchronisierten Daten dauerhaft weiter an; es gibt keinen aktiven
   Abgleich, der Spiele wieder entfernt, die in Veo verschwunden sind.
-- Ein Team wurde von keinem Platform-Admin für Veo freigeschaltet (kein
-  Eintrag in der Team-Zuordnung): Playerboard zeigt für dieses Team keine
-  Veo-Daten und keinen Sync-Status an, nicht die Daten eines anderen Teams.
+- Ein Team wurde nicht für Veo freigeschaltet (keine aktivierte Zeile in der
+  Team-Zuordnung): Playerboard zeigt für dieses Team keine Veo-Daten und
+  keinen Sync-Status an, nicht die Daten eines anderen Teams. Wird eine
+  bestehende Zuordnung deaktiviert, bleiben die Daten gespeichert, sind aber
+  bis zur Reaktivierung nicht lesbar.
 - Der Veo-Zugang des Vereins läuft ab (z. B. Session ungültig): Sync-Läufe
   schlagen fehl, bestehende Daten bleiben unverändert sichtbar, der Hinweis
   aus User Story 3 macht den Zustand sichtbar; ein Mensch muss den Zugang
@@ -194,26 +200,31 @@ nichts aktiviert wurde, sieht weiterhin nichts.
   speichern, dass er ausschließlich dem automatischen Sync zur Verfügung
   steht — niemals für normale Mitglieder oder Spieler-Accounts einsehbar oder
   nutzbar.
-- **FR-011**: Die Zuordnung eines Veo-Club-/Team-Kürzels zu einem
-  Playerboard-Team MUST von einem Platform-Admin über eine
-  Einstellungs-Oberfläche konfiguriert werden — nicht fest im Code oder
-  Deployment verdrahtet. Ein Team MUST erst nach dieser expliziten
-  Freischaltung Veo-Daten synchronisieren oder anzeigen können; ohne
-  Zuordnung darf ein Team keinerlei Veo-Daten sehen.
+- **FR-011**: In v1 MUST die Zuordnung eines Veo-Club-/Team-Kürzels zu einem
+  Playerboard-Team als explizite, dokumentierte direkte SQL-Aktion des
+  Deployment-Operators angelegt, geändert oder deaktiviert werden — nicht fest
+  im Code oder Deployment verdrahtet. Diese Aktion setzt die Entscheidung des
+  Platform-Admins um; die dafür vorgesehene Einstellungs-Oberfläche gehört zum
+  separaten Feature "Platform-Administration". Ein Team MUST erst nach einer
+  aktivierten Zuordnung Veo-Daten synchronisieren oder anzeigen können; ohne
+  aktivierte Zuordnung darf ein Team keinerlei Veo-Daten sehen.
 - **FR-012**: Spieler-individuelle Statistiken (pro Person statt pro Team)
   sind expliziter Nicht-Teil dieses Features.
-- **FR-013**: Dieses Feature MUST auf der Platform-Admin-Rolle des
-  vorgelagerten Features "Platform-Administration" aufbauen (Ernennen/
-  Entfernen von Platform-Admins ist dort geregelt), statt eine eigene
-  Administratoren-Verwaltung zu bauen; nur wer dort als Platform-Admin
-  geführt wird, darf die Veo-Team-Zuordnung aus FR-011 ändern.
+- **FR-013**: Dieses Feature MUST keine eigene Administratoren-Verwaltung
+  bauen. Sobald das vorgelagerte Feature "Platform-Administration" seine
+  Platform-Admin-Rolle und Einstellungs-Oberfläche bereitstellt, MUST nur diese
+  Rolle die Veo-Team-Zuordnung aus FR-011 ändern dürfen; bis dahin erfolgt die
+  Änderung ausschließlich über den dokumentierten Deployment-Operator-
+  Prozess.
 
 ### Key Entities
 
 - **Team-Zuordnung**: Verknüpft ein Playerboard-Team mit dem entsprechenden
-  Team im Veo-Account des Vereins (Club-/Team-Kürzel); von einem
-  Platform-Admin angelegt/entfernt. Grundlage dafür, ob und welche Spiele für
-  ein Team synchronisiert werden — ohne Eintrag kein Zugriff.
+  Team im Veo-Account des Vereins (Club-/Team-Kürzel); in v1 über eine
+  dokumentierte direkte SQL-Aktion des Deployment-Operators angelegt,
+  geändert oder deaktiviert. Grundlage dafür, ob und welche Spiele für ein
+  Team synchronisiert und gelesen werden — ohne aktivierte Zuordnung kein
+  Zugriff.
 - **Platform-Admin**: Eine teamübergreifende Berechtigung, definiert im
   vorgelagerten Feature "Platform-Administration"; hier nur als
   Voraussetzung referenziert, um die Team-Zuordnung zu verwalten.
@@ -246,13 +257,13 @@ nichts aktiviert wurde, sieht weiterhin nichts.
 
 - Der Verein hat einen eigenen, aktiven Veo-Account mit mindestens einem
   Team, dessen Spiele mit aktivierter Analyse aufgezeichnet werden.
-- Dieses Feature setzt voraus, dass das vorgelagerte Feature
-  "Platform-Administration" (Platform-Admin-Rolle, Ernennen/Entfernen
-  weiterer Admins) bereits existiert; ohne dieses Feature kann die
-  Team-Zuordnung aus FR-011 nicht verwaltet werden.
+- Die Platform-Admin-Rolle und ihre Einstellungs-Oberfläche gehören zum
+  vorgelagerten, separaten Feature "Platform-Administration". Bis dieses
+  Feature existiert, wird die Freischaltungsentscheidung über den
+  dokumentierten Deployment-Operator-Prozess umgesetzt.
 - Für den aktuellen Bedarf des Vereins wird zum Start genau ein
-  Playerboard-Team über die Einstellungs-Oberfläche freigeschaltet; das
-  System schränkt die Anzahl möglicher Zuordnungen nicht künstlich ein.
+  Playerboard-Team über eine direkte SQL-Aktion freigeschaltet; das System
+  schränkt die Anzahl möglicher Zuordnungen nicht künstlich ein.
 - Täglicher Sync ist ausreichend zeitnah; ein Bedarf an Beinahe-Echtzeit-
   Updates direkt nach Spielende besteht nicht.
 - Das erneute Herstellen des Veo-Zugangs, falls dieser abläuft oder ungültig

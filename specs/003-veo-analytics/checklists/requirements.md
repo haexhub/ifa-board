@@ -35,11 +35,10 @@
   Brainstorming vor Erstellung der Spec geklärt.
 - `/speckit.clarify`-Session (2026-09-18) hat vier weitere Fragen geklärt und
   dabei eine bedeutende Scope-Änderung aufgedeckt: die Team-Zuordnung wird
-  nicht mehr fest verdrahtet, sondern von einem Platform-Admin über eine
-  Einstellungs-Oberfläche verwaltet (neue User Story 4, FR-011/FR-013 neu
-  gefasst). Diese Spec hängt jetzt von einem vorgelagerten, noch nicht
-  spezifizierten Feature "Platform-Administration" ab (Platform-Admin-Rolle,
-  Ernennen/Entfernen weiterer Admins) — siehe Assumptions.
+  nicht fest verdrahtet, sondern als expliziter Datenbankeintrag verwaltet.
+  Die v1-Durchführung erfolgt manuell durch den Deployment-Operator im Auftrag
+  des Platform-Admins; die spätere Einstellungs-Oberfläche gehört zum
+  vorgelagerten Feature "Platform-Administration".
 - plan.md/research.md/data-model.md/contracts/tasks.md wurden nach dieser
   Clarify-Session überarbeitet: Team-Zuordnung ist jetzt eine
   `service_role`-only Tabelle (`veo_team_mappings`) statt fester Env-Vars,

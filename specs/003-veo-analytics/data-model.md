@@ -1,18 +1,21 @@
 # Phase 1 Data Model: Veo-Kamera-Analytics
 
-Four new tables, following this repo's existing Drizzle conventions (uuid or
+Five new tables, following this repo's existing Drizzle conventions (uuid or
 natural-key PK per shape, `team_id` FK + index on team-scoped tables,
 `timestamp with time zone` columns). None of these tables are ever written
-by an authenticated user — only by the sync route via `useAdminDb()` — so
-none carry `created_by`/`last_updated_by` audit columns (there is no human
+by an authenticated user. The sync route uses `useAdminDb()` for application
+access, while protected operational rows may be seeded through direct SQL, so
+none carry `created_by`/`last_updated_by` audit columns (there is no app-level
 author to record).
 
 ## `veo_team_mappings`
 
 One row per Playerboard team explicitly enabled for Veo sync (User Story 4 /
-FR-011). Absence of a row for a team means that team has no Veo access at
-all — this is the enforcement point for "no team sees Veo data without
-explicit enablement." See
+FR-011). In v1, the deployment operator applies this mapping by direct SQL
+after the platform-admin decision; the settings UI belongs to the separate
+Platform-Administration feature. Absence of an enabled row for a team means
+that team has no Veo access at all — this is the enforcement point for "no
+team sees Veo data without explicit enablement." See
 [research.md §5](./research.md#5-team-mapping-veo-team--playerboard-team)
 for why this is a table now (not `runtimeConfig`) and for the v1 sequencing
 (row created manually via SQL, not through a UI, until the separate
@@ -27,10 +30,11 @@ for why this is a table now (not `runtimeConfig`) and for the v1 sequencing
 | `created_at` | `timestamptz`, `defaultNow()` | |
 | `updated_at` | `timestamptz`, `defaultNow()` | |
 
-**RLS**: enabled, **zero** policies — same shape as `veo_sync_credentials`.
+**RLS**: enabled with an explicit deny-all policy for `authenticated`.
 Nothing in this feature's own UI reads or writes this table; only the sync
 route (`useAdminDb()`) reads it, and only a human with direct DB access
-writes it, for now.
+writes it, for now. The three analytics-table read policies also require an
+enabled mapping through the `public.is_veo_enabled` security-definer helper.
 
 ## `veo_matches`
 
@@ -43,15 +47,16 @@ One row per Veo match synced for the team.
 | `veo_match_id` | `text`, **unique** | Veo's own match identifier (e.g. `e7730b08-...`) — the idempotency key |
 | `played_at` | `timestamptz`, not null | match kickoff time, from Veo |
 | `opponent_name` | `text`, not null | |
-| `own_score` | `integer`, nullable | null if Veo has no result yet |
-| `opponent_score` | `integer`, nullable | |
+| `own_score` | `integer`, not null | only persisted after Veo reports a completed result |
+| `opponent_score` | `integer`, not null | |
 | `home_or_away` | `text`, `check in ('home','away')` | |
 | `created_at` | `timestamptz`, `defaultNow()` | first synced |
 | `last_synced_at` | `timestamptz`, `defaultNow()` | updated on every upsert |
 
-**Validation**: `own_score`/`opponent_score` are either both present or both
-null (a match without a finished/analyzed result is stored with no score,
-per FR-007 — it is not fabricated).
+**Validation**: both `own_score` and `opponent_score` are required. The sync
+route defers the insert until Veo reports completed analytics and both scores
+are present; an incomplete match is skipped and retried on the next run per
+FR-007.
 
 ## `veo_match_stats`
 
@@ -103,9 +108,9 @@ User Story 3's "last successful sync" must never regress.
 ## `veo_sync_credentials`
 
 One row per team, holding the captured Veo session artifact needed for
-silent auth renewal (see [research.md](./research.md) §3–4). **RLS enabled,
-zero policies** — unreachable by any `authenticated`/`anon` client, only by
-`useAdminDb()`.
+silent auth renewal (see [research.md](./research.md) §3–4). **RLS enabled
+with an explicit deny-all policy for `authenticated`** — unreachable by any
+`authenticated`/`anon` client, only by `useAdminDb()`.
 
 | Column | Type | Notes |
 |---|---|---|

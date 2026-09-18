@@ -6,6 +6,14 @@ import { mapAnalysisStatsToRows } from '~/server/utils/veo/mapStats'
 
 type Db = ReturnType<typeof useAdminDb>
 type TeamMapping = typeof schema.veoTeamMappings.$inferSelect
+type AnalyzableVeoMatch = Omit<VeoMatchListItem, 'info'> & {
+  info: { stats: { score_aggregated: { own: number; opponent: number } } }
+}
+
+const isAnalyzable = (match: VeoMatchListItem): match is AnalyzableVeoMatch =>
+  match.has_analytics_enabled &&
+  match.info.stats.score_aggregated.own !== null &&
+  match.info.stats.score_aggregated.opponent !== null
 
 const touchAttempt = (db: Db, teamId: string) =>
   db
@@ -31,7 +39,7 @@ const recordFailure = (db: Db, teamId: string, error: unknown) =>
     })
     .where(eq(schema.veoSyncStatus.teamId, teamId))
 
-const upsertMatch = async (db: Db, teamId: string, match: VeoMatchListItem) => {
+const upsertMatch = async (db: Db, teamId: string, match: AnalyzableVeoMatch) => {
   const values = {
     teamId,
     veoMatchId: match.identifier,
@@ -78,14 +86,14 @@ const syncTeam = async (db: Db, mapping: TeamMapping) => {
       veoTeamSlug: mapping.veoTeamSlug,
     })
     // FR-007: a match without completed Veo analysis is skipped, not an error.
-    const analyzable = matches.filter((m) => m.has_analytics_enabled)
+    const analyzable = matches.filter(isAnalyzable)
 
     for (const match of analyzable) {
-      const matchId = await upsertMatch(db, mapping.teamId, match)
       const statsPayload = await fetchAnalysisStats(accessToken, {
         veoTeamId: match.team__id,
         veoMatchIds: [match.identifier],
       })
+      const matchId = await upsertMatch(db, mapping.teamId, match)
       await upsertStats(db, mapAnalysisStatsToRows(statsPayload, matchId))
     }
 

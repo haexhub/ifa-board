@@ -13,8 +13,8 @@ export type VeoMatch = {
   veo_match_id: string
   played_at: string
   opponent_name: string
-  own_score: number | null
-  opponent_score: number | null
+  own_score: number
+  opponent_score: number
   home_or_away: 'home' | 'away'
   stats: VeoMatchStat[]
 }

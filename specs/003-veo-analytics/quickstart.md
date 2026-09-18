@@ -41,8 +41,11 @@ the deployment ([research.md §5](./research.md#5-team-mapping-veo-team--playerb
    `enabled = true`. No row for a team means no Veo access for it — this is
    the actual security boundary (FR-011), not a convenience default.
 2. To revoke access, set that row's `enabled = false` (or delete it) — the
-   sync route skips it on the next run; already-synced data for that team
-   stays visible (per the clarified "deleted/private match" edge case).
+   sync route skips it on the next run and the RLS read policies hide the
+   team's retained data and sync status; the rows remain stored for a later
+   re-enable. This is separate from the retention rule for a match deleted or
+   made private in Veo, which remains visible while the Playerboard mapping is
+   enabled.
 
 ## One-time credential capture (manual, outside this repo's automation)
 
@@ -69,9 +72,10 @@ the deployment ([research.md §5](./research.md#5-team-mapping-veo-team--playerb
 Add one crontab entry on the VPS (outside this repo, documented here for
 ops reference):
 
-```
-0 3 * * * curl -sf -X POST https://<host>/api/veo/sync \
-  -H "Authorization: Bearer $NUXT_VEO_SYNC_SECRET" || echo "veo sync failed" | logger
+```bash
+# /etc/playerboard/veo-sync.env is root-owned and mode 0600.
+0 3 * * * . /etc/playerboard/veo-sync.env && test -n "${NUXT_VEO_SYNC_SECRET:-}" || { echo "veo sync environment missing" | logger; exit 1; }; curl --fail --silent --show-error --connect-timeout 10 --max-time 300 -X POST https://<host>/api/veo/sync \
+  -H "Authorization: Bearer ${NUXT_VEO_SYNC_SECRET}" || echo "veo sync failed" | logger
 ```
 
 Daily at 03:00 is sufficient per FR-006/the clarified "täglicher Batch

@@ -39,7 +39,7 @@ be implemented or tested before this phase is done.
 - [x] T002 Add `veoSyncSecret` to `runtimeConfig` in `nuxt.config.ts` (depends on T001)
 - [x] T003 Add `veoTeamMappings`, `veoMatches`, `veoMatchStats`, `veoSyncStatus`, `veoSyncCredentials` table definitions to `db/schema/index.ts` exactly per [data-model.md](./data-model.md)
 - [x] T004 Run `pnpm db:generate` to produce the Drizzle migration for the 5 new tables under `supabase/migrations/` (depends on T003)
-- [x] T005 Hand-write the RLS migration `supabase/migrations/<ts>_veo_tables_rls.sql` per [contracts/rls-policies.md](./contracts/rls-policies.md) — enable RLS + `*_read_member` select policies on `veo_matches`/`veo_match_stats`/`veo_sync_status`; enable RLS with **zero** policies on `veo_sync_credentials` and `veo_team_mappings` (depends on T004)
+- [x] T005 Hand-write the RLS migration `supabase/migrations/<ts>_veo_tables_rls.sql` per [contracts/rls-policies.md](./contracts/rls-policies.md) — enable RLS + enabled-mapping-gated `*_read_member` select policies on `veo_matches`/`veo_match_stats`/`veo_sync_status`; add explicit deny-all policies for `authenticated` on `veo_sync_credentials` and `veo_team_mappings` so every table has a policy while service_role remains the only application access (depends on T004)
 - [x] T006 Run `pnpm gen:types` and commit the regenerated `app/types/database.ts` together with both migrations from T004/T005 (Principle V)
 
 **Checkpoint**: Schema + config exist, including the `veo_team_mappings`

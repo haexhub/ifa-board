@@ -265,18 +265,14 @@ export const veoMatches = pgTable(
     veoMatchId: text('veo_match_id').notNull().unique(),
     playedAt: timestamp('played_at', { withTimezone: true }).notNull(),
     opponentName: text('opponent_name').notNull(),
-    ownScore: integer('own_score'),
-    opponentScore: integer('opponent_score'),
+    ownScore: integer('own_score').notNull(),
+    opponentScore: integer('opponent_score').notNull(),
     homeOrAway: text('home_or_away').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check('veo_matches_home_or_away_check', sql`${t.homeOrAway} in ('home','away')`),
-    check(
-      'veo_matches_score_pair_check',
-      sql`(${t.ownScore} is null) = (${t.opponentScore} is null)`,
-    ),
     index('veo_matches_team_idx').on(t.teamId),
   ],
 )

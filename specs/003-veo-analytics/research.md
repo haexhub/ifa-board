@@ -120,9 +120,9 @@ without present-day need beyond what RLS already gives us).
 **Decision** (superseded during `/speckit.clarify` — see spec.md's
 Clarifications, FR-011/FR-013, User Story 4): the mapping is a database
 table, `veo_team_mappings`, not fixed `runtimeConfig` values. RLS is enabled
-with **zero** policies — the same service_role-only shape as
-`veo_sync_credentials` — since for this feature's own scope, nothing in the
-client-facing app reads or writes it directly.
+with an explicit deny-all policy for `authenticated`, the same service-role-
+only boundary as `veo_sync_credentials`; nothing in the client-facing app
+reads or writes it directly.
 
 **Rationale**: A club-internal security requirement emerged during
 clarification: a team MUST NOT see Veo data without an explicit, deliberate
@@ -142,13 +142,13 @@ via SQL by the person operating the deployment (documented in
 [quickstart.md](./quickstart.md), same pattern as the one-time credential
 capture in [§4](#4-credential-storage)) — not through any in-app UI or role
 check. This satisfies FR-011's security requirement immediately (no team
-gets a row without a deliberate manual action) without building a role
-system this feature doesn't otherwise need. When "Platform-Administration"
-ships, it adds a `platform_admins` table/role and a settings page that reads
-and writes this *same* table through the app instead of raw SQL — the only
-follow-up change needed then is one additional RLS write policy scoped to
-that role; `veo_matches`/`veo_match_stats`/`veo_sync_status` and the sync
-route itself do not change at all.
+gets an enabled row without a deliberate manual action) without building a
+role system this feature doesn't otherwise need. When
+"Platform-Administration" ships, it adds a `platform_admins` table/role and a
+settings page that reads and writes this *same* table through the app instead
+of raw SQL — the deny-all policy will then be replaced by a narrowly scoped
+write policy for that role; `veo_matches`/`veo_match_stats`/`veo_sync_status`
+and the sync route itself do not change at all.
 
 **Alternatives considered**: three fixed `runtimeConfig` values (the
 original v1 plan, before this clarification) — rejected once the explicit
