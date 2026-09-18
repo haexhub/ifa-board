@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.2](https://github.com/haexhub/playerboard/compare/v0.2.1...v0.2.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* allow $fetch as known Nuxt global in eslint config ([dab5649](https://github.com/haexhub/playerboard/commit/dab5649301a8c7e6075eaa44baa661d30bfb7f92))
+* avoid leaking callback diagnostics in logs ([056bab0](https://github.com/haexhub/playerboard/commit/056bab04a042073b42f511610348e1f501592eb1))
+* pin search_path on functions flagged by Supabase linter, apply migrations on boot ([31ea331](https://github.com/haexhub/playerboard/commit/31ea331a074cee45087754d720641e1a2e1169c0))
+* pin search_path on Supabase functions, apply migrations on boot ([e12d145](https://github.com/haexhub/playerboard/commit/e12d145563a5180d93b2a95d8a211d30c1940b6d))
+* surface real auth error in callback session-exchange failures ([0850d17](https://github.com/haexhub/playerboard/commit/0850d177aaef107ff3972848f2d1eab5b275e6bf))
+* surface real auth error in callback session-exchange failures ([4bae9ad](https://github.com/haexhub/playerboard/commit/4bae9adcc253c00688a4d2e31da54cd6d4aae4dd))
+
 ## [0.2.1](https://github.com/haexhub/playerboard/compare/v0.2.0...v0.2.1) (2026-09-18)
 
 
