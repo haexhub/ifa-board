@@ -111,13 +111,13 @@ manual sum of the seeded rows.
 
 ### Tests for User Story 2 ⚠️ write first, confirm they fail before implementing
 
-- [ ] T019 [P] [US2] Add a season-aggregation scenario to `tests/e2e/veo-analytics-flow.spec.ts`: seed 3+ matches with known scores/stats, assert the summary's W/D/L record and category sums equal the manually computed totals
+- [x] T019 [P] [US2] Add a season-aggregation scenario to `tests/e2e/veo-analytics-flow.spec.ts`: seed 3+ matches with known scores/stats, assert the summary's W/D/L record and category sums equal the manually computed totals
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Extend `app/composables/useVeoAnalytics.ts` with a computed season aggregation (W/D/L record from `own_score`/`opponent_score`; per-category sums from `veo_match_stats`) over the already-loaded matches (depends on T016)
-- [ ] T021 [P] [US2] Implement `app/components/veo/VeoSeasonSummary.vue`
-- [ ] T022 [US2] Render `VeoSeasonSummary` on `app/pages/t/[slug]/analytics.vue` above the match list (depends on T020, T021; makes T019 pass)
+- [x] T020 [US2] Extend `app/composables/useVeoAnalytics.ts` with a computed season aggregation (W/D/L record from `own_score`/`opponent_score`; per-category sums from `veo_match_stats`) over the already-loaded matches (depends on T016)
+- [x] T021 [P] [US2] Implement `app/components/veo/VeoSeasonSummary.vue`
+- [x] T022 [US2] Render `VeoSeasonSummary` on `app/pages/t/[slug]/analytics.vue` above the match list (depends on T020, T021; makes T019 pass)
 
 **Checkpoint**: US1, US2, and US4 all independently functional.
 
@@ -135,13 +135,13 @@ successful sync time.
 
 ### Tests for User Story 3 ⚠️ write first, confirm they fail before implementing
 
-- [ ] T023 [P] [US3] Add sync-status scenarios to `tests/e2e/veo-analytics-flow.spec.ts`: (a) seed a healthy `veo_sync_status` row → banner shows last-success time; (b) seed `consecutive_failures >= 3` → banner shows a clear failure hint
+- [x] T023 [P] [US3] Add sync-status scenarios to `tests/e2e/veo-analytics-flow.spec.ts`: (a) seed a healthy `veo_sync_status` row → banner shows last-success time; (b) seed `consecutive_failures >= 3` → banner shows a clear failure hint
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Extend `app/composables/useVeoAnalytics.ts` to also load the team's `veo_sync_status` row (depends on T016)
-- [ ] T025 [P] [US3] Implement `app/components/veo/VeoSyncStatusBanner.vue`
-- [ ] T026 [US3] Render `VeoSyncStatusBanner` on `app/pages/t/[slug]/analytics.vue` (depends on T024, T025; makes T023 pass)
+- [x] T024 [US3] Extend `app/composables/useVeoAnalytics.ts` to also load the team's `veo_sync_status` row (depends on T016)
+- [x] T025 [P] [US3] Implement `app/components/veo/VeoSyncStatusBanner.vue`
+- [x] T026 [US3] Render `VeoSyncStatusBanner` on `app/pages/t/[slug]/analytics.vue` (depends on T024, T025; makes T023 pass)
 
 **Checkpoint**: All four user stories independently functional.
 
@@ -149,7 +149,7 @@ successful sync time.
 
 ## Final Phase: Polish & Cross-Cutting Concerns
 
-- [ ] T027 [P] Run `pnpm lint` and `pnpm typecheck`; fix any violations across all files touched by this feature
+- [x] T027 [P] Run `pnpm lint` and `pnpm typecheck`; fix any violations across all files touched by this feature
 - [ ] T028 One-time production step (not a code change, tracked here so it isn't forgotten): capture the real Veo session per [quickstart.md](./quickstart.md)'s "One-time credential capture" and insert the `veo_sync_credentials` row for the team enabled in T008 — `sync.post.ts` cannot do anything in production before this
 - [ ] T029 One-time production step: add the crontab line from [quickstart.md](./quickstart.md)'s "Production scheduling" on the VPS
 

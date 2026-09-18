@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import VeoMatchCard from '~/components/veo/VeoMatchCard.vue'
-import { useVeoAnalytics, type VeoMatch } from '~/composables/useVeoAnalytics'
+import VeoSeasonSummary from '~/components/veo/VeoSeasonSummary.vue'
+import VeoSyncStatusBanner from '~/components/veo/VeoSyncStatusBanner.vue'
+import {
+  computeSeasonSummary,
+  useVeoAnalytics,
+  type VeoMatch,
+  type VeoSyncStatus,
+} from '~/composables/useVeoAnalytics'
 
 definePageMeta({
   middleware: ['team-context'],
 })
 
 const { currentTeam } = useTeamContext()
-const { listMatches } = useVeoAnalytics()
+const { listMatches, getSyncStatus } = useVeoAnalytics()
 
 const matches = ref<VeoMatch[]>([])
+const syncStatus = ref<VeoSyncStatus | null>(null)
 const isLoading = ref(false)
 const loadError = ref<string | null>(null)
 
@@ -20,7 +28,10 @@ const load = async () => {
   isLoading.value = true
   loadError.value = null
   try {
-    matches.value = await listMatches(teamId)
+    ;[matches.value, syncStatus.value] = await Promise.all([
+      listMatches(teamId),
+      getSyncStatus(teamId),
+    ])
   } catch (err) {
     loadError.value = err instanceof Error ? err.message : 'Konnte Veo-Daten nicht laden'
   } finally {
@@ -29,6 +40,8 @@ const load = async () => {
 }
 
 watch(() => currentTeam.value?.id, () => void load(), { immediate: true })
+
+const seasonSummary = computed(() => computeSeasonSummary(matches.value))
 </script>
 
 <template>
@@ -40,12 +53,15 @@ watch(() => currentTeam.value?.id, () => void load(), { immediate: true })
       </p>
     </header>
 
+    <VeoSyncStatusBanner v-if="!isLoading && !loadError" :status="syncStatus" />
+
     <p v-if="isLoading" class="text-sm text-neutral-500">Lade Veo-Daten…</p>
     <p v-else-if="loadError" class="text-sm text-red-700" role="alert">{{ loadError }}</p>
     <p v-else-if="!matches.length" class="text-sm text-neutral-500" data-testid="veo-analytics-empty">
       Noch keine Veo-Daten für dieses Team.
     </p>
     <div v-else class="space-y-4">
+      <VeoSeasonSummary :summary="seasonSummary" />
       <VeoMatchCard v-for="match in matches" :key="match.id" :match="match" />
     </div>
   </section>

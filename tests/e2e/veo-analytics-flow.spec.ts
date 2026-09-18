@@ -27,6 +27,15 @@ const restInsert = async <T>(table: string, rows: unknown[]): Promise<T[]> => {
   return (await res.json()) as T[]
 }
 
+const restUpsert = async (table: string, onConflict: string, row: unknown): Promise<void> => {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
+    method: 'POST',
+    headers: { ...restHeaders(), Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify(row),
+  })
+  if (!res.ok) throw new Error(`UPSERT ${table} failed: ${res.status} ${await res.text()}`)
+}
+
 const uniqueSuffix = () => Math.random().toString(36).slice(2, 8)
 
 type MailpitMessage = {
@@ -179,11 +188,38 @@ test.describe('T003-veo-analytics — Veo camera analytics page', () => {
     await expect(winGoals).toContainText('9')
     await expect(winGoals).toContainText('0')
 
+    // Season summary aggregates both matches: 1 win, 1 draw, 0 losses;
+    // own goals 2+9=11, own corners 3+5=8.
+    await expect(pageA.getByTestId('veo-season-record')).toContainText('1S 1U 0N')
+    await expect(pageA.getByTestId('veo-season-total-football_goal_total')).toHaveText('11')
+    await expect(pageA.getByTestId('veo-season-total-football_corner_total')).toHaveText('8')
+
     // Team B — no team-A data ever leaks, and the empty state shows instead.
     await pageB.goto(`/t/${slugB}/analytics`, { waitUntil: 'networkidle' })
     await expect(pageB.getByTestId('veo-analytics-empty')).toBeVisible()
     await expect(pageB.getByText('SG Neukirchen')).toHaveCount(0)
     await expect(pageB.getByText('FSV Limbach')).toHaveCount(0)
+
+    // Healthy sync status shows the last successful sync time.
+    await restUpsert('veo_sync_status', 'team_id', {
+      team_id: teamIdA,
+      last_attempt_at: new Date().toISOString(),
+      last_success_at: new Date().toISOString(),
+      consecutive_failures: 0,
+    })
+    await pageA.reload({ waitUntil: 'networkidle' })
+    await expect(pageA.getByTestId('veo-sync-status-ok')).toBeVisible()
+    await expect(pageA.getByTestId('veo-sync-status-failing')).toHaveCount(0)
+
+    // Repeated failures replace it with a clear failure hint instead.
+    await restUpsert('veo_sync_status', 'team_id', {
+      team_id: teamIdA,
+      consecutive_failures: 3,
+      last_error: 'Veo silent re-authentication failed (session likely expired)',
+    })
+    await pageA.reload({ waitUntil: 'networkidle' })
+    await expect(pageA.getByTestId('veo-sync-status-failing')).toBeVisible()
+    await expect(pageA.getByTestId('veo-sync-status-ok')).toHaveCount(0)
 
     await ctxA.close()
     await ctxB.close()
