@@ -1,7 +1,33 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import type { AuthError } from '@supabase/supabase-js'
 import { POST_LOGIN_REDIRECT_KEY } from '~/composables/useAuth'
 import type { Database } from '~/types/database'
+
+interface AuthErrorInfo {
+  message: string
+  status?: number
+  code?: string
+  name: string
+}
+
+interface CallbackDiag {
+  hasHash?: boolean
+  hasCode?: boolean
+  implicitError?: AuthErrorInfo
+  pkceError?: AuthErrorInfo
+}
+
+const describeAuthError = (err: AuthError): AuthErrorInfo => ({
+  message: err.message,
+  status: err.status,
+  code: err.code,
+  name: err.name,
+})
+
+const reportAuthError = (diag: CallbackDiag) => {
+  $fetch('/api/auth/callback-error', { method: 'POST', body: diag }).catch(() => {})
+}
 
 definePageMeta({
   layout: 'onboarding',
@@ -54,10 +80,11 @@ const finalize = async () => {
   }
 }
 
-const consumeImplicitFragment = async (): Promise<boolean> => {
+const consumeImplicitFragment = async (diag: CallbackDiag): Promise<boolean> => {
   if (typeof window === 'undefined') return false
   const hash = window.location.hash
-  if (!hash || !hash.includes('access_token=')) return false
+  diag.hasHash = Boolean(hash && hash.includes('access_token='))
+  if (!diag.hasHash) return false
   const params = new URLSearchParams(hash.slice(1))
   const accessToken = params.get('access_token')
   const refreshToken = params.get('refresh_token')
@@ -66,17 +93,24 @@ const consumeImplicitFragment = async (): Promise<boolean> => {
     access_token: accessToken,
     refresh_token: refreshToken,
   })
-  if (setErr) return false
+  if (setErr) {
+    diag.implicitError = describeAuthError(setErr)
+    return false
+  }
   history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
   return true
 }
 
-const consumePkceCode = async (): Promise<boolean> => {
+const consumePkceCode = async (diag: CallbackDiag): Promise<boolean> => {
   if (typeof window === 'undefined') return false
   const code = new URLSearchParams(window.location.search).get('code')
+  diag.hasCode = Boolean(code)
   if (!code) return false
   const { error: exchangeErr } = await client.auth.exchangeCodeForSession(code)
-  if (exchangeErr) return false
+  if (exchangeErr) {
+    diag.pkceError = describeAuthError(exchangeErr)
+    return false
+  }
   history.replaceState(null, '', window.location.pathname)
   return true
 }
@@ -93,10 +127,12 @@ const pollForSession = async () => {
 }
 
 onMounted(async () => {
-  await consumeImplicitFragment()
-  await consumePkceCode()
+  const diag: CallbackDiag = {}
+  await consumeImplicitFragment(diag)
+  await consumePkceCode(diag)
   const ok = await pollForSession()
   if (!ok) {
+    reportAuthError(diag)
     error.value =
       'Anmeldung konnte nicht abgeschlossen werden. Bitte fordere einen neuen Link an.'
     return

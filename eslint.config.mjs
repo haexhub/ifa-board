@@ -6,6 +6,7 @@ import prettier from 'eslint-config-prettier'
 import globals from 'globals'
 
 const nuxtGlobals = {
+  $fetch: 'readonly',
   defineNuxtConfig: 'readonly',
   defineNuxtRouteMiddleware: 'readonly',
   navigateTo: 'readonly',
