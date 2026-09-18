@@ -21,6 +21,7 @@ type PlayerRow = {
 }
 
 const playerList = ref<InstanceType<typeof PlayerList> | null>(null)
+const playerFormRef = ref<InstanceType<typeof PlayerForm> | null>(null)
 const isPlayerDialogOpen = ref(false)
 const isInviteDialogOpen = ref(false)
 const editingPlayer = ref<PlayerRow | null>(null)
@@ -67,7 +68,7 @@ const onInvited = () => {
 
     <ShadcnDialog v-model:open="isPlayerDialogOpen">
       <ShadcnDialogContent>
-        <div data-testid="player-dialog">
+        <div data-testid="player-dialog" class="space-y-4">
           <ShadcnDialogHeader>
             <ShadcnDialogTitle>
               {{ editingPlayer ? 'Spieler bearbeiten' : 'Neuer Spieler' }}
@@ -75,6 +76,7 @@ const onInvited = () => {
           </ShadcnDialogHeader>
           <PlayerForm
             v-if="teamId"
+            ref="playerFormRef"
             :key="`${dialogSeq}-${editingPlayer?.id ?? 'new'}`"
             :team-id="teamId"
             :player="editingPlayer"
@@ -84,6 +86,14 @@ const onInvited = () => {
             <ShadcnDialogClose as-child>
               <ShadcnButton type="button" variant="outline">Schließen</ShadcnButton>
             </ShadcnDialogClose>
+            <ShadcnButton
+              type="submit"
+              form="player-form"
+              :disabled="playerFormRef?.loading"
+              data-testid="player-form-submit"
+            >
+              {{ playerFormRef?.loading ? 'Speichere…' : 'Speichern' }}
+            </ShadcnButton>
           </ShadcnDialogFooter>
         </div>
       </ShadcnDialogContent>

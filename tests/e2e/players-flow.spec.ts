@@ -89,6 +89,7 @@ test.describe('US4 — trainer manages the player roster', () => {
     // Create player A with jersey #7.
     await trainerPage.getByTestId('player-new-button').click()
     await expect(playerDialog).toBeVisible()
+    await playerDialog.getByRole('radio', { name: 'Manuell' }).check()
     await playerDialog.getByLabel('Name').fill('Alice Anker')
     await playerDialog.getByLabel(/Trikotnummer/).fill('7')
     await trainerPage.getByTestId('player-form-submit').click()
@@ -99,6 +100,7 @@ test.describe('US4 — trainer manages the player roster', () => {
 
     // Create player B with jersey #9.
     await trainerPage.getByTestId('player-new-button').click()
+    await playerDialog.getByRole('radio', { name: 'Manuell' }).check()
     await playerDialog.getByLabel('Name').fill('Bruno Bereit')
     await playerDialog.getByLabel(/Trikotnummer/).fill('9')
     await trainerPage.getByTestId('player-form-submit').click()

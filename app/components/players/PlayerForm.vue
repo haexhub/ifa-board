@@ -46,7 +46,7 @@ const submitError = ref<string | null>(null)
 const loading = ref(false)
 const candidates = ref<LinkCandidate[]>([])
 const selectedCandidateId = ref('')
-const mode = ref<Mode>('manual')
+const mode = ref<Mode>('invite')
 const inviteEmail = ref('')
 const inviteEmailSchema = z.string().trim().toLowerCase().email('Bitte gültige E-Mail eingeben.')
 
@@ -140,10 +140,12 @@ const submit = async () => {
     loading.value = false
   }
 }
+
+defineExpose({ loading })
 </script>
 
 <template>
-  <form class="space-y-3" novalidate data-testid="player-form" @submit.prevent="submit">
+  <form id="player-form" class="space-y-3" novalidate data-testid="player-form" @submit.prevent="submit">
     <div v-if="!player" class="flex flex-wrap gap-4 text-sm" role="radiogroup" aria-label="Konto-Zuordnung">
       <label class="flex items-center gap-1">
         <input v-model="mode" type="radio" class="accent-primary" value="manual" />
@@ -194,16 +196,13 @@ const submit = async () => {
       </ShadcnLabel>
     </div>
     <label class="flex items-center gap-2">
-      <ShadcnCheckbox v-model="consent" />
+      <ShadcnCheckbox v-model="consent" class="rounded-none" />
       <span class="text-sm font-medium text-foreground">Foto-Einwilligung</span>
     </label>
     <label class="flex items-center gap-2">
-      <ShadcnCheckbox v-model="active" />
+      <ShadcnCheckbox v-model="active" class="rounded-none" />
       <span class="text-sm font-medium text-foreground">Aktiv im Kader</span>
     </label>
-    <ShadcnButton type="submit" :disabled="loading" data-testid="player-form-submit">
-      {{ loading ? 'Speichere…' : 'Speichern' }}
-    </ShadcnButton>
     <p v-if="submitError" class="text-sm text-destructive" role="alert">{{ submitError }}</p>
   </form>
 </template>
