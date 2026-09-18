@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/haexhub/playerboard/compare/v0.2.2...v0.3.0) (2026-09-18)
+
+
+### Features
+
+* add season summary and sync-status banner to Veo analytics page ([84f682e](https://github.com/haexhub/playerboard/commit/84f682e07fbee2595028f9383cbfb98c3c436e0e))
+* inline player/category creation and point sliders in training grid ([6a38777](https://github.com/haexhub/playerboard/commit/6a387779f9bff449413035328528d06133399587))
+* move header nav into a burger menu ([4737c07](https://github.com/haexhub/playerboard/commit/4737c0743d6832a9aa4d7580c4937f8f8b91e43c))
+* sync and display Veo match stats for enabled teams ([a0267b3](https://github.com/haexhub/playerboard/commit/a0267b37e9a332794f252a31a0c9cb1512c3c60e))
+* Veo camera analytics (003-veo-analytics) ([7298128](https://github.com/haexhub/playerboard/commit/729812886ec880445571cff178bd7d0cc7a05316))
+
+
+### Bug Fixes
+
+* address Veo analytics review findings ([b7fcd97](https://github.com/haexhub/playerboard/commit/b7fcd97fe570528fdbcbd1df301e4768aaf9501a))
+* make checkbox touch targets square ([ba3e55b](https://github.com/haexhub/playerboard/commit/ba3e55b0a3b039cb408414899bbe2a9ddeab9db2))
+* make checkbox touch targets square ([8077e2a](https://github.com/haexhub/playerboard/commit/8077e2aa750d27192be029a81995f142d39b3c6e))
+
 ## [0.2.2](https://github.com/haexhub/playerboard/compare/v0.2.1...v0.2.2) (2026-09-18)
 
 
