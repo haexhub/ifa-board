@@ -20,10 +20,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid payload' })
   }
 
-  console.error('[auth-callback] session could not be established', {
-    ...parsed.data,
-    userAgent: getRequestHeader(event, 'user-agent'),
-  })
+  console.error('[auth-callback] session could not be established')
 
   return { ok: true }
 })
