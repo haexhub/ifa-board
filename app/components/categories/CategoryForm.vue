@@ -132,7 +132,7 @@ const submit = async () => {
       <span v-if="fieldErrors.sort_order" class="block text-sm text-destructive">{{ fieldErrors.sort_order }}</span>
     </ShadcnLabel>
     <label class="flex items-center gap-2">
-      <ShadcnCheckbox v-model="active" />
+      <ShadcnCheckbox v-model="active" class="min-w-touch" />
       <span class="text-sm font-medium text-foreground">Aktiv</span>
     </label>
     <ShadcnButton type="submit" :disabled="loading" data-testid="category-form-submit">
