@@ -443,6 +443,190 @@ export type Database = {
         }
         Relationships: []
       }
+      veo_match_stats: {
+        Row: {
+          category: string
+          created_at: string
+          match_id: string
+          period_values: Json
+          stat_type: string
+          team_association: string
+          value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          match_id: string
+          period_values: Json
+          stat_type: string
+          team_association: string
+          value: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          match_id?: string
+          period_values?: Json
+          stat_type?: string
+          team_association?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veo_match_stats_match_id_veo_matches_id_fk"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "veo_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veo_matches: {
+        Row: {
+          created_at: string
+          home_or_away: string
+          id: string
+          last_synced_at: string
+          opponent_name: string
+          opponent_score: number
+          own_score: number
+          played_at: string
+          team_id: string
+          veo_match_id: string
+        }
+        Insert: {
+          created_at?: string
+          home_or_away: string
+          id?: string
+          last_synced_at?: string
+          opponent_name: string
+          opponent_score: number
+          own_score: number
+          played_at: string
+          team_id: string
+          veo_match_id: string
+        }
+        Update: {
+          created_at?: string
+          home_or_away?: string
+          id?: string
+          last_synced_at?: string
+          opponent_name?: string
+          opponent_score?: number
+          own_score?: number
+          played_at?: string
+          team_id?: string
+          veo_match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veo_matches_team_id_teams_id_fk"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veo_sync_credentials: {
+        Row: {
+          captured_at: string
+          session_cookie: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          captured_at: string
+          session_cookie: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          captured_at?: string
+          session_cookie?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veo_sync_credentials_team_id_teams_id_fk"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veo_sync_status: {
+        Row: {
+          consecutive_failures: number
+          last_attempt_at: string | null
+          last_error: string | null
+          last_success_at: string | null
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_failures?: number
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_success_at?: string | null
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_failures?: number
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_success_at?: string | null
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veo_sync_status_team_id_teams_id_fk"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      veo_team_mappings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          team_id: string
+          updated_at: string
+          veo_club_slug: string
+          veo_team_slug: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          team_id: string
+          updated_at?: string
+          veo_club_slug: string
+          veo_team_slug: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          team_id?: string
+          updated_at?: string
+          veo_club_slug?: string
+          veo_team_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "veo_team_mappings_team_id_teams_id_fk"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -485,6 +669,7 @@ export type Database = {
       is_member: { Args: { p_team: string }; Returns: boolean }
       is_profile_visible: { Args: { p_profile: string }; Returns: boolean }
       is_trainer: { Args: { p_team: string }; Returns: boolean }
+      is_veo_enabled: { Args: { p_team: string }; Returns: boolean }
       reorder_point_categories: {
         Args: { p_items: Json; p_team: string }
         Returns: undefined
@@ -624,4 +809,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

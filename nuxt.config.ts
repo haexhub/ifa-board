@@ -43,6 +43,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     supabaseServiceRoleKey: '',
     supabaseDbUrl: '',
+    veoSyncSecret: '',
   },
 
   alias: {
