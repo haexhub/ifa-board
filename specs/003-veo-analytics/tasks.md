@@ -27,7 +27,7 @@ and the manual seed step that stands in for that UI until it exists.
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Document `NUXT_VEO_SYNC_SECRET` in `.env.example` (see [quickstart.md](./quickstart.md))
+- [x] T001 [P] Document `NUXT_VEO_SYNC_SECRET` in `.env.example` (see [quickstart.md](./quickstart.md))
 
 ---
 
@@ -36,11 +36,11 @@ and the manual seed step that stands in for that UI until it exists.
 **Purpose**: Schema + config every user story depends on. No user story can
 be implemented or tested before this phase is done.
 
-- [ ] T002 Add `veoSyncSecret` to `runtimeConfig` in `nuxt.config.ts` (depends on T001)
-- [ ] T003 Add `veoTeamMappings`, `veoMatches`, `veoMatchStats`, `veoSyncStatus`, `veoSyncCredentials` table definitions to `db/schema/index.ts` exactly per [data-model.md](./data-model.md)
-- [ ] T004 Run `pnpm db:generate` to produce the Drizzle migration for the 5 new tables under `supabase/migrations/` (depends on T003)
-- [ ] T005 Hand-write the RLS migration `supabase/migrations/<ts>_veo_tables_rls.sql` per [contracts/rls-policies.md](./contracts/rls-policies.md) — enable RLS + `*_read_member` select policies on `veo_matches`/`veo_match_stats`/`veo_sync_status`; enable RLS with **zero** policies on `veo_sync_credentials` and `veo_team_mappings` (depends on T004)
-- [ ] T006 Run `pnpm gen:types` and commit the regenerated `app/types/database.ts` together with both migrations from T004/T005 (Principle V)
+- [x] T002 Add `veoSyncSecret` to `runtimeConfig` in `nuxt.config.ts` (depends on T001)
+- [x] T003 Add `veoTeamMappings`, `veoMatches`, `veoMatchStats`, `veoSyncStatus`, `veoSyncCredentials` table definitions to `db/schema/index.ts` exactly per [data-model.md](./data-model.md)
+- [x] T004 Run `pnpm db:generate` to produce the Drizzle migration for the 5 new tables under `supabase/migrations/` (depends on T003)
+- [x] T005 Hand-write the RLS migration `supabase/migrations/<ts>_veo_tables_rls.sql` per [contracts/rls-policies.md](./contracts/rls-policies.md) — enable RLS + `*_read_member` select policies on `veo_matches`/`veo_match_stats`/`veo_sync_status`; enable RLS with **zero** policies on `veo_sync_credentials` and `veo_team_mappings` (depends on T004)
+- [x] T006 Run `pnpm gen:types` and commit the regenerated `app/types/database.ts` together with both migrations from T004/T005 (Principle V)
 
 **Checkpoint**: Schema + config exist, including the `veo_team_mappings`
 security boundary. All user stories below can now start.
@@ -58,7 +58,7 @@ data or sync status on `/t/[slug]/analytics`, even if other teams do.
 
 ### Tests for User Story 4 ⚠️ write first, confirm they fail before implementing
 
-- [ ] T007 [P] [US4] Add a scenario to `tests/e2e/veo-analytics-flow.spec.ts`: seed `veo_matches` for team A but no `veo_team_mappings`/data for team B; assert team B's `/t/[slug]/analytics` shows an empty state, never team A's data
+- [x] T007 [P] [US4] Add a scenario to `tests/e2e/veo-analytics-flow.spec.ts`: seed `veo_matches` for team A but no `veo_team_mappings`/data for team B; assert team B's `/t/[slug]/analytics` shows an empty state, never team A's data
 
 ### Implementation for User Story 4
 
@@ -81,19 +81,19 @@ opponent, per half.
 
 ### Tests for User Story 1 ⚠️ write first, confirm they fail before implementing
 
-- [ ] T009 [P] [US1] Save the real captured `POST .../analysis/stats/` response as fixture `tests/fixtures/veo/analysis-stats-response.json`
-- [ ] T010 [P] [US1] Unit tests for the mapping function in `tests/unit/veo-map-stats.spec.ts`: full fixture payload (T009) → expected `veo_match_stats` rows; a payload missing a category → no fabricated row for it; a malformed/unexpected payload shape → throws/rejects cleanly
-- [ ] T011 [P] [US1] E2E test in `tests/e2e/veo-analytics-flow.spec.ts`: seed `veo_matches`/`veo_match_stats` rows directly via the test DB, sign in, open `/t/[slug]/analytics`, assert the match card shows the result and every seeded stat category for own vs. opponent
+- [x] T009 [P] [US1] Save the real captured `POST .../analysis/stats/` response as fixture `tests/fixtures/veo/analysis-stats-response.json`
+- [x] T010 [P] [US1] Unit tests for the mapping function in `tests/unit/veo-map-stats.spec.ts`: full fixture payload (T009) → expected `veo_match_stats` rows; a payload missing a category → no fabricated row for it; a malformed/unexpected payload shape → throws/rejects cleanly
+- [x] T011 [P] [US1] E2E test in `tests/e2e/veo-analytics-flow.spec.ts`: seed `veo_matches`/`veo_match_stats` rows directly via the test DB, sign in, open `/t/[slug]/analytics`, assert the match card shows the result and every seeded stat category for own vs. opponent
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Implement `app/server/utils/veo/mapStats.ts` — pure function mapping a `POST .../analysis/stats/` response to `veo_match_stats` row objects (depends on T003; makes T010 pass)
-- [ ] T013 [P] [US1] Implement `app/server/utils/veo/client.ts` — typed fetch wrappers for `GET app.veo.co/api/app/matches/` (filtered by club/team slug, `analytics_version=2`) and `POST app.veo.co/api/app/analysis/stats/` (`{type:"team_match", team_id, match_ids, group_by:"team_association"}`), both taking a bearer token
-- [ ] T014 [US1] Implement `app/server/utils/veo/auth.ts` — PKCE `code_verifier`/`code_challenge` generation, `GET auth.veo.co/oidc/auth?...&prompt=none` silent renewal, `POST auth.veo.co/oidc/token` exchange → short-lived bearer token; reads/writes `veo_sync_credentials` via `useAdminDb()` (depends on T002, T003-T006)
-- [ ] T015 [US1] Implement `app/server/api/veo/sync.post.ts`: reject unless `Authorization: Bearer` matches `runtimeConfig.veoSyncSecret`; load all `enabled` rows from `veo_team_mappings` via `useAdminDb()` and, for each, list matches (T013) using its `veo_club_slug`/`veo_team_slug`, skip any without completed Veo analysis (FR-007, no error), fetch + map stats (T012) for the rest, upsert `veo_matches`/`veo_match_stats` with `ON CONFLICT` per [data-model.md](./data-model.md)'s keys, then update that team's `veo_sync_status` (`last_attempt_at` always; `last_success_at`/reset `consecutive_failures` on success; increment `consecutive_failures` + set `last_error` on failure) (depends on T012, T013, T014)
-- [ ] T016 [P] [US1] Implement `app/composables/useVeoAnalytics.ts` — loads `veo_matches` + `veo_match_stats` for the current team via the plain (RLS-gated) Supabase browser client (depends on T003-T006)
-- [ ] T017 [P] [US1] Implement `app/components/veo/VeoMatchCard.vue` — result, opponent, and all stat categories for one match, own vs. opponent columns, per-half breakdown
-- [ ] T018 [US1] Implement `app/pages/t/[slug]/analytics.vue` — team-context middleware (no `trainer-only`), renders the match list via T016 + T017, with an empty state when there is no data (depends on T016, T017; makes T007 and T011 pass)
+- [x] T012 [P] [US1] Implement `app/server/utils/veo/mapStats.ts` — pure function mapping a `POST .../analysis/stats/` response to `veo_match_stats` row objects (depends on T003; makes T010 pass)
+- [x] T013 [P] [US1] Implement `app/server/utils/veo/client.ts` — typed fetch wrappers for `GET app.veo.co/api/app/matches/` (filtered by club/team slug, `analytics_version=2`) and `POST app.veo.co/api/app/analysis/stats/` (`{type:"team_match", team_id, match_ids, group_by:"team_association"}`), both taking a bearer token
+- [x] T014 [US1] Implement `app/server/utils/veo/auth.ts` — PKCE `code_verifier`/`code_challenge` generation, `GET auth.veo.co/oidc/auth?...&prompt=none` silent renewal, `POST auth.veo.co/oidc/token` exchange → short-lived bearer token; reads/writes `veo_sync_credentials` via `useAdminDb()` (depends on T002, T003-T006)
+- [x] T015 [US1] Implement `app/server/api/veo/sync.post.ts`: reject unless `Authorization: Bearer` matches `runtimeConfig.veoSyncSecret`; load all `enabled` rows from `veo_team_mappings` via `useAdminDb()` and, for each, list matches (T013) using its `veo_club_slug`/`veo_team_slug`, skip any without completed Veo analysis (FR-007, no error), fetch + map stats (T012) for the rest, upsert `veo_matches`/`veo_match_stats` with `ON CONFLICT` per [data-model.md](./data-model.md)'s keys, then update that team's `veo_sync_status` (`last_attempt_at` always; `last_success_at`/reset `consecutive_failures` on success; increment `consecutive_failures` + set `last_error` on failure) (depends on T012, T013, T014)
+- [x] T016 [P] [US1] Implement `app/composables/useVeoAnalytics.ts` — loads `veo_matches` + `veo_match_stats` for the current team via the plain (RLS-gated) Supabase browser client (depends on T003-T006)
+- [x] T017 [P] [US1] Implement `app/components/veo/VeoMatchCard.vue` — result, opponent, and all stat categories for one match, own vs. opponent columns, per-half breakdown
+- [x] T018 [US1] Implement `app/pages/t/[slug]/analytics.vue` — team-context middleware (no `trainer-only`), renders the match list via T016 + T017, with an empty state when there is no data (depends on T016, T017; makes T007 and T011 pass)
 
 **Checkpoint**: User Story 1 fully functional and independently testable —
 sync populates data, the page displays it.

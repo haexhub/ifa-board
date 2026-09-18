@@ -48,11 +48,19 @@ the deployment ([research.md §5](./research.md#5-team-mapping-veo-team--playerb
 
 1. A trainer/admin logs into `app.veo.co` with the club account in a normal
    browser.
-2. The resulting `auth.veo.co` session artifact is captured (see this
-   feature's research process for the concrete steps) and inserted into
-   `veo_sync_credentials` for the team via a direct DB write (e.g.
-   `psql`/Supabase SQL editor) — not through any app UI in v1
-   ([research.md §3](./research.md#3-veo-authentication-strategy)).
+2. In DevTools → Application/Storage → Cookies for `https://auth.veo.co`,
+   copy every cookie as one `name=value; name2=value2` string (this is what
+   `app/server/utils/veo/auth.ts` sends as the `Cookie` header for the
+   silent-renewal request).
+3. Insert it into `veo_sync_credentials` for the team via a direct DB write
+   (e.g. `psql`/Supabase SQL editor) — not through any app UI in v1
+   ([research.md §3](./research.md#3-veo-authentication-strategy)):
+   ```sql
+   insert into veo_sync_credentials (team_id, session_cookie, captured_at)
+   values ('<team uuid>', '<cookie string from step 2>', now())
+   on conflict (team_id) do update
+     set session_cookie = excluded.session_cookie, captured_at = excluded.captured_at;
+   ```
 3. This step is repeated whenever `veo_sync_status.consecutive_failures`
    indicates the session has stopped renewing.
 

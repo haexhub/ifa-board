@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgSchema,
   pgTable,
   primaryKey,
@@ -238,6 +239,89 @@ export const pointEntries = pgTable(
     index('point_entries_player_idx').on(t.playerId),
   ],
 )
+
+// Veo-Kamera-Analytics (specs/003-veo-analytics). Rows below are never
+// written by an authenticated user — only by the sync route via
+// useAdminDb() — so none carry created_by/last_updated_by audit columns.
+
+export const veoTeamMappings = pgTable('veo_team_mappings', {
+  teamId: uuid('team_id')
+    .primaryKey()
+    .references(() => teams.id, { onDelete: 'cascade' }),
+  veoClubSlug: text('veo_club_slug').notNull(),
+  veoTeamSlug: text('veo_team_slug').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const veoMatches = pgTable(
+  'veo_matches',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    veoMatchId: text('veo_match_id').notNull().unique(),
+    playedAt: timestamp('played_at', { withTimezone: true }).notNull(),
+    opponentName: text('opponent_name').notNull(),
+    ownScore: integer('own_score'),
+    opponentScore: integer('opponent_score'),
+    homeOrAway: text('home_or_away').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check('veo_matches_home_or_away_check', sql`${t.homeOrAway} in ('home','away')`),
+    check(
+      'veo_matches_score_pair_check',
+      sql`(${t.ownScore} is null) = (${t.opponentScore} is null)`,
+    ),
+    index('veo_matches_team_idx').on(t.teamId),
+  ],
+)
+
+export const veoMatchStats = pgTable(
+  'veo_match_stats',
+  {
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => veoMatches.id, { onDelete: 'cascade' }),
+    teamAssociation: text('team_association').notNull(),
+    statType: text('stat_type').notNull(),
+    category: text('category').notNull(),
+    value: integer('value').notNull(),
+    periodValues: jsonb('period_values').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.matchId, t.teamAssociation, t.statType] }),
+    check(
+      'veo_match_stats_team_association_check',
+      sql`${t.teamAssociation} in ('own','opponent')`,
+    ),
+  ],
+)
+
+export const veoSyncStatus = pgTable('veo_sync_status', {
+  teamId: uuid('team_id')
+    .primaryKey()
+    .references(() => teams.id, { onDelete: 'cascade' }),
+  lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+  lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+  consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+  lastError: text('last_error'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const veoSyncCredentials = pgTable('veo_sync_credentials', {
+  teamId: uuid('team_id')
+    .primaryKey()
+    .references(() => teams.id, { onDelete: 'cascade' }),
+  sessionCookie: text('session_cookie').notNull(),
+  capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
 
 export const teamSettings = pgTable('team_settings', {
   teamId: uuid('team_id')
