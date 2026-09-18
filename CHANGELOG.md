@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/haexhub/playerboard/compare/v0.2.0...v0.2.1) (2026-09-18)
+
+
+### Bug Fixes
+
+* polish new-player dialog layout ([6330bb6](https://github.com/haexhub/playerboard/commit/6330bb699481df0e3d6b3d53f11b9340a6a9a6df))
+* polish new-player dialog layout ([7a06ea7](https://github.com/haexhub/playerboard/commit/7a06ea7d0d9fd90fe36c7c4d521994349c307fad))
+
 ## [0.2.0](https://github.com/haexhub/playerboard/compare/v0.1.0...v0.2.0) (2026-09-18)
 
 
